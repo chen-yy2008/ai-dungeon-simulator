@@ -1,4 +1,4 @@
-# 开发进度：本轮完成并停止
+# 连续开发进度（当前 v0.7 正式发布门禁）
 
 2026-10-14。批准队列 v0.4 → Pages → v0.5 → v0.6 已全部完成；没有启动 v0.7。PAUSE_AUTODEV 阶段检查均不存在。
 
@@ -20,3 +20,5 @@
 
 ## v0.7 本轮开始
 2026-10-14：用户新授权视觉重制，已完整阅读任务书；main 与 origin/main 同为 fffcb1c。创建 feat/v0.7-visual-overhaul；原用户新增任务书保留。CLI repo/workflow 有效，Pages 沿用自定义工作流，尚未更新线上。已实际生成 v0.6 世界/地牢/人物卡/390px 截图到 docs/visual-comparison。官方 Ninja Adventure / Kenney Fantasy UI Borders 确认 CC0，正在下载筛选，资源与测试临时文件沿用已有项目忽略目录。
+
+2026-10-14：v0.7全部本地视觉/逻辑/Chrome/Edge/file://验收通过；22PNG190156字节、运行包约345222字节。PowerShell13保护用例通过；开发分支2089829已安全快进本地main，尚未推送正式v0.7标签。用户追加批准v0.8→v0.9→v1.0，原新任务书完整读取、规格已建立；v0.7发布和Pages核验后进入v0.8，尚无下一版玩法改动。
