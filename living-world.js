@@ -124,7 +124,10 @@
     for (const q of DEFINITIONS) {
       const state = sim.world.quests[q.id];
       if (state.stage === 'followup' && sim.world.minutes >= state.due && present(sim, q.receiver)) { followup(sim, q); return true; }
-      if (state.stage === 'offer' && prerequisites(sim, q) && present(sim, q.giver)) { offer(sim, q); return true; }
+      if (state.stage === 'offer' && prerequisites(sim, q) && present(sim, q.giver)) {
+        if(sim.world.npcs[q.giver].relationship<=-15){state.offeredAt=sim.world.minutes;finishLater(sim,q,'declined');sim.time(10);sim.record('refusal','委托被拒绝',sim.world.npcs[q.giver].name+'因关系不足拒绝开放「'+q.title+'」，没有发放任务资源。',undefined,{quest:q.id,npc:q.giver});return true;}
+        offer(sim, q); return true;
+      }
       if (state.stage === 'active' && present(sim, q.giver) &&
         ((q.objective === 'map' && sim.dungeon?.explorer.visited.size >= 20) || (q.objective === 'potion' && sim.character.potions > 0))) { investigate(sim, q); return true; }
     }
@@ -172,6 +175,12 @@
   function legacyResult(sim, id) {
     if (id === 'merchant_return') memory(sim, 'merchant', sim.world.flags.merchantChoice === 'help' ? '记得冒险者救助了自己' : '记得冒险者未提供救助', sim.world.flags.merchantChoice === 'help' ? 15 : -8);
   }
+  function price(world,kind) {
+    const n=world.npcs[kind==='inn'?'innkeeper':'merchant'];
+    const base=kind==='inn'?6:8;
+    const discount=kind==='inn'?world.flags.lodgingTrust:world.flags.merchantDiscount||world.flags.caravanMarket==='safe';
+    return Math.max(2,base-(discount||n.relationship>=10?2:0)+(n.relationship<=-10||kind==='potion'&&world.flags.caravanMarket==='exploited'?2:0));
+  }
   function validate(world) {
     if (world.npcs === undefined && world.quests === undefined) return true;
     if (!world.npcs || !world.quests) return false;
@@ -187,7 +196,7 @@
         (s.branch === null || ['success', 'failure', 'declined', 'borrowed'].includes(s.branch));
     });
   }
-  const api = { DEFINITIONS, NPCS, install, sync, present, tryTown, tryForest, battleResult, legacyStarted, legacyResult, validate };
+  const api = { DEFINITIONS, NPCS, memory, price, install, sync, present, tryTown, tryForest, battleResult, legacyStarted, legacyResult, validate };
   root.LivingWorld = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

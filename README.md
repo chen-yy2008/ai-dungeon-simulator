@@ -1,8 +1,8 @@
-# AI Dungeon Simulator v0.8.0 · 命运开端
+# AI Dungeon Simulator v0.9.0 · 命运编织
 
 一名拥有性格与目标的冒险者，在艾尔文边境自主旅行、处理事件、探索地牢、战斗与成长。你是观察者，创建角色后无需控制移动或攻击。原生HTML/CSS/JavaScript与Canvas，无注册、后端、付费API、CDN或运行依赖。
 
-[在线游玩](https://chen-yy2008.github.io/ai-dungeon-simulator/) · [仓库](https://github.com/chen-yy2008/ai-dungeon-simulator) · [版本记录](CHANGELOG.md) · [本版验收](docs/releases/v0.8-report.md)
+[在线游玩](https://chen-yy2008.github.io/ai-dungeon-simulator/) · [仓库](https://github.com/chen-yy2008/ai-dungeon-simulator) · [版本记录](CHANGELOG.md) · [本版验收](docs/releases/v0.9-report.md)
 
 ![法师的真实神迹](docs/v08/miracle-mage.png)
 
@@ -13,6 +13,15 @@
 4. 更多操作提供保存、读取、新建和重开；角色详情查看信仰、装备、技能、关系与记忆。
 
 推荐探索目标、默认性格、种子world-browser-003、快速播放。相同版本/种子/初始设定可复现，播放速度与游戏时间分离。每25动作、暂停和退出自动保存，手动存取同一localStorage槽；读取后暂停。存储受浏览器策略限制，无云同步。
+
+## v0.9人与因果
+商队营地的救援/付费/牟利/放弃、三座实际碑文与入口法阵的封印/净化/取能、最后一封信的归还/隐瞒/牟利/拒绝，均需实际到达与后续在场回访。关系改变药水/住宿价格、委托开放、情报优先级和有限危机援助，安全商路降低逐格旅行疲劳。三条线继承已有商队/测绘/旅馆委托，不重置旧世界。
+
+原创史官「鸦羽」提供首次可跳过/重看的七段文本教程：欢迎→职业神明→位置/时间/暂停→居民记忆→实际判定→成长装备→保存/传记。教程独立本地存储，必要暂停后恢复之前播放状态。持续旁白只是事实的模板视图，九类事件有变体，不发奖、不耗规则随机数，不使用LLM或语音。
+
+个人传记保留关键事实ID/时间，按六章节归档，超出长日志上限也保留关键节点。称号按死亡→守护→秘法→逐利→幸存优先级决定。三线完成后回镇收束；1500动作后开始实际撤离并返镇作为兜底，未完成任务如实记为未完成。高级设定可选择持续观察，不自动收束。默认种子三职业约830～920动作结束；倍速改变现实播放时长，不伪造事件。
+
+[三线状态转移与后果](docs/story-transitions.md) · [v0.9验收截图](docs/releases/v0.9-report.md)
 
 ## v0.8真实规则
 |职业|神明|技能|神迹|
@@ -39,6 +48,7 @@
 - core.js：连通地牢、已知地图Explorer、d20与回合结算。
 - world.js：World/Character/Agent/Simulation、时间/旅行/合法状态变更/存档。
 - events.js、living-world.js：有限事件、NPC日程/关系与跨日委托。
+- story-rules.js、narrative.js、tutorial.js：有限主线/终局、只读史官/传记、独立教程。
 - progression.js：数据驱动神明/装备/技能/成长，由Simulation调用。
 - character-card.js、card-editor.js：纯角色设定、校验、编辑/导出。
 - assets.js、view.js、legacy-view.js：本地图集、相机/缓存/动画、加载失败后备。
@@ -47,11 +57,11 @@
 Agent结合性格、目标、风险、资源、关系与经历评分，并使用种子控制少量扰动；它是规则系统，不是LLM。UI/叙事/动画不改变世界、不消费世界随机数。
 
 ## 测试与发布
-运行不需要Node；开发使用Node22+，执行node tests/check.cjs、node tests/world.cjs、node tests/fate.cjs及tests内UI/角色/NPC/素材/Pages检查。node tests/browser.cjs使用本机Chrome/Edge、独立忽略配置与原生CDP，BROWSER_PATH指定浏览器；BROWSER_FILE=1另验file://。截图/依赖临时资料在忽略目录，正式证据见docs。Windows PowerShell保护测试：powershell -NoProfile -File tests/publish.ps1。具体实际计数和未验证范围见各[版本报告](docs/releases/)。
+运行不需要Node；开发使用Node22+，执行node tests/check.cjs、node tests/world.cjs、node tests/fate.cjs、node tests/story.cjs及tests内UI/角色/NPC/素材/Pages检查。node tests/browser.cjs使用本机Chrome/Edge、独立忽略配置与原生CDP，BROWSER_PATH指定浏览器；BROWSER_FILE=1另验file://。截图/依赖临时资料在忽略目录，正式证据见docs。Windows PowerShell保护测试：powershell -NoProfile -File tests/publish.ps1。具体实际计数和未验证范围见各[版本报告](docs/releases/)。
 
 正式发布遵循[AGENTS](AGENTS.md)和[发布指南](docs/PUBLISHING.md)：准确文件白名单→安全/测试门禁→提交/注释Tag→原子推送→Actions→Pages SHA/HTTP/在线浏览器核验，不强推。
 
 ## 素材与局限
 22张CC0 PNG约186KiB，来自官方Ninja Adventure（Pixel-Boy/AAA）与Kenney Fantasy UI Borders；全部本地托管。[授权/来源](docs/ASSETS.md)、[致谢](docs/CREDITS.md)、[v0.6/v0.7真实对比](docs/visual-comparison/README.md)。新增神徽/反馈原创Canvas/CSS，不使用官方游戏立绘。
 
-世界道路固定、NPC按日程换点非连续寻路；单目标简化规则，装备/事件有限；当前没有三主线、教程或正式终局（有限队列后续v0.9/v1.0）。历史最多2000条，本地单存档槽，无云同步/多人/外部角色搜索/LLM。已验证Windows Chrome/Edge及390px模拟触屏，未实际验证iOS/Safari或真实手机硬件。
+世界道路固定、NPC按日程换点非连续寻路；单目标简化规则，装备/事件有限；三主线与阶段结局均已实现；开场预设与分享界面按有限队列留待v1.0。历史最多2000条，本地单存档槽，无云同步/多人/外部角色搜索/LLM。已验证Windows Chrome/Edge及390px模拟触屏，未实际验证iOS/Safari或真实手机硬件。

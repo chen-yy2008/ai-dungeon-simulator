@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   const text = (id, value) => { $(id).textContent = value; };
   const cards = globalThis.CharacterCard, editor = new globalThis.CardEditor(cards, $);
-  let renderedAbilities = '', renderedClass = '';
+  let renderedAbilities = '', renderedClass = '', tutorial = null;
   const STORAGE_KEY = 'ai-dungeon-simulator:v0.3';
   const delays = { slow: 700, normal: 250, fast: 60 };
   const regionNames = { town: '边境小镇', forest: '北部森林', ruins: '古代遗迹' };
@@ -23,7 +23,7 @@
   function entry(record, story = false) {
     const li = document.createElement(story ? 'article' : 'li');
     const meta = document.createElement('span'); meta.className = 'log-step'; meta.textContent = `${timestamp(record.time)} · ${record.title}`;
-    const body = document.createElement('p'); body.textContent = story ? record.story : record.text;
+    const body = document.createElement('p'); body.textContent = story ? Chronicler.describe(record,sim.character) : record.text;
     li.append(meta, body); return li;
   }
   function renderLogs(force = false) {
@@ -31,7 +31,7 @@
     renderedRecord = sim.world.recordId;
     const story = $('story'), atBottom = story.scrollHeight - story.scrollTop - story.clientHeight < 40;
     $('log').replaceChildren(...sim.world.history.slice(-16).reverse().map(r => entry(r)));
-    story.replaceChildren(...sim.world.history.slice(-18).map(r => entry(r, true)));
+    story.replaceChildren(...sim.world.history.filter(r=>Chronicler.category(r)||['birth','result','victory'].includes(r.type)).slice(-18).map(r => entry(r, true)));
     const details = sim.world.history.filter(r => ['attack', 'escape', 'decision', 'result', 'battle', 'quest-check', 'quest-followup'].includes(r.type)).slice(-16).reverse();
     $('detail-log').replaceChildren(...details.map(r => entry(r)));
     if (!details.length) { const li = document.createElement('li'); li.textContent = '尚未进行判定。角色出发后，这里将记录真实骰点与重要选择。'; $('detail-log').append(li); }
@@ -70,9 +70,6 @@
     text('position', `${regionNames[c.position.region]} (${c.position.x}, ${c.position.y})`);
     text('moves', `移动 ${c.moves} 步`); text('actions', `逻辑行动 ${sim.actions} 次`);
     text('progress', sim.dungeon ? `遗迹探索 ${(sim.dungeon.explorer.visited.size / sim.dungeon.floorCount * 100).toFixed(1)}%` : '遗迹尚未进入');
-    const state = sim.status === 'dead' ? '冒险失败' : !running ? started ? '暂停' : '等待' : battle ? '战斗中' : sim.pending ? '事件处理中' : '自主冒险中';
-    text('status', state); text('toggle', sim.status === 'dead' ? '冒险已结束' : running ? '暂停模拟' : started ? '继续模拟' : '开始模拟');
-    $('toggle').disabled = sim.status === 'dead';
     $('enemy-health').hidden = !battle;
     if (battle) {
       const target = battle.target;
@@ -101,21 +98,27 @@
       const li = document.createElement('li'); li.textContent = `${q.title} · ${stages[sim.world.quests[q.id].stage]}`; return li;
     }));
     if (renderedPhase !== sim.phase) { $('dungeon').className = sim.phase === 'dungeon' ? 'dungeon-transition' : 'world-transition'; renderedPhase = sim.phase; }
+    $('saga-list').replaceChildren(...Object.entries(SagaRules.TITLES).map(([id,title])=>{const li=document.createElement('li'),q=sim.world.saga[id];li.textContent=title+' · '+({dormant:'尚无消息',offer:'回应请求',search:'寻信中',track:'执行原商队委托',choice:'前往营地',clues:'调查三碑 '+sim.world.saga.stars.clues.length+'/3',ritual:'前往遗迹法阵',followup:'等待在场回访',complete:'已结算'}[q.stage])+(q.branch?' / '+SagaRules.BRANCH_NAMES[q.branch]:'');return li}));
+    tutorial?.update(sim);
+    const state = sim.status === 'complete' ? sim.world.saga.ending.title : sim.status === 'dead' ? '冒险失败' : !running ? started ? '暂停' : '等待' : battle ? '战斗中' : sim.pending ? '事件处理中' : '自主冒险中';
+    text('status', state); text('toggle', sim.status !== 'alive' ? '冒险已结束' : running ? '暂停模拟' : started ? '继续模拟' : '开始模拟');
+    $('toggle').disabled = sim.status !== 'alive';
+
     view.effects=$('effects-input').checked;view.draw(sim, running); renderLogs(force);
   }
   function cancelTimer() { if (timer !== null) clearTimeout(timer); timer = null; }
-  function schedule() { cancelTimer(); if (running && sim.status !== 'dead') timer = setTimeout(tick, delays[$('speed').value]); }
+  function schedule() { cancelTimer(); if (running && sim.status === 'alive') timer = setTimeout(tick, delays[$('speed').value]); }
   function save(showMessage = true) {
     if (!started) { if (showMessage) notify('请先创建或开始一段冒险。'); return; }
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sim.toSave())); storageAvailable = true; if (showMessage) notify('已保存角色、时间、世界后果、地牢状态、随机源与事件历史。'); }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sim.toSave())); storageAvailable = true; tutorial?.noteSave(); if (showMessage) notify('已保存角色、时间、世界后果、地牢状态、随机源与事件历史。'); }
     catch { storageAvailable = false; if (showMessage) notify('浏览器未允许本地存储或空间不足。模拟仍可继续，请检查浏览器设置。'); }
   }
   function tick() {
     timer = null;
-    if (!running || sim.status === 'dead') return;
+    if (!running || sim.status !== 'alive') return;
     try {
-      sim.step(); if (sim.status === 'dead') running = false;
-      render(); if (storageAvailable && (sim.actions % 25 === 0 || sim.status === 'dead')) save(false); schedule();
+      sim.step(); if (sim.status !== 'alive') running = false;
+      render(); if (storageAvailable && (sim.actions % 25 === 0 || sim.status !== 'alive')) save(false); schedule();
     } catch (error) { running = false; cancelTimer(); render(); notify(`模拟已暂停：${error.message}`); console.error(error); }
   }
   function replaceSimulation(next, autoStart = false) {
@@ -123,7 +126,7 @@
     renderedRecord = -1; renderedPhase = ''; render(true); schedule();
   }
   $('toggle').addEventListener('click', () => {
-    if (sim.status === 'dead') return;
+    if (sim.status !== 'alive') return;
     running = !running; started = true;
     if (!running) { cancelTimer(); save(false); } else schedule(); render();
   });
@@ -134,7 +137,7 @@
     notify('世界已重新生成，同一角色配置从小镇重新开始；旧存档可通过读取恢复。');
   });
   $('new-adventure').addEventListener('click', () => {
-    running = false; cancelTimer(); render(); $('seed-input').value = freshSeed(); $('create-dialog').showModal();
+    running = false; cancelTimer(); render(); $('seed-input').value = freshSeed(); $('create-dialog').showModal(); tutorial?.update(sim);
   });
   $('save').addEventListener('click', () => save());
   $('load').addEventListener('click', () => {
@@ -142,7 +145,7 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) { notify('尚无本地冒险存档。'); return; }
       const restored = A.Simulation.fromSave(JSON.parse(raw));
-      replaceSimulation(restored); started = true; render(true); $('create-dialog').close();
+      replaceSimulation(restored); started = true; render(true); $('create-dialog').close(); tutorial?.update(sim);
       notify('已恢复存档并暂停；点击继续模拟后从同一随机源状态继续。');
     } catch (error) { notify(`无法读取：${error.message}`); }
   });
@@ -157,8 +160,8 @@
   $('create-form').addEventListener('submit', event => {
     event.preventDefault();
     try {
-      const config = { card: editor.read(), seed: $('seed-input').value.trim() || freshSeed() };
-      replaceSimulation(new A.Simulation(config), true); $('create-dialog').close();
+      const config = { card: editor.read(), seed: $('seed-input').value.trim() || freshSeed(), endless:$('endless-input').checked };
+      replaceSimulation(new A.Simulation(config), true); $('create-dialog').close(); tutorial?.update(sim);
     } catch (error) { text('card-notice', error.message); document.querySelector('.card-editor').open = true; return; }
     notify('角色已创建，AI 已接管行动。相同种子和角色配置会产生相同逻辑结果。');
   });
@@ -180,7 +183,7 @@
   });
   $('edit-character').addEventListener('click', () => {
     running = false; cancelTimer(); render(); editor.fill(cards.exportCharacter(sim.character)); classDescription();
-    $('seed-input').value = freshSeed(); $('details-dialog').close(); $('create-dialog').showModal();
+    $('seed-input').value = freshSeed(); $('details-dialog').close(); $('create-dialog').showModal(); tutorial?.update(sim);
     notify('正在编辑新冒险的设定；确认创建前，原冒险保持暂停。');
   });
   $('export-character').addEventListener('click', () => editor.download(cards.exportCharacter(sim.character)));
@@ -208,8 +211,10 @@
     document.querySelectorAll('[data-mobile-view]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
     if (button.dataset.mobileView === 'story') $('chronicle').open = true;
   }));
+  $('biography').addEventListener('click',()=>{text('biography-text',Chronicler.biography(sim));$('biography-dialog').showModal();});
+  tutorial=new RavenTutorial({get:$,active:()=>started,pause:()=>{const before=running;running=false;cancelTimer();view.draw(sim,false);return before;},resume:before=>{if(before&&sim.status==='alive'){running=true;schedule();}render();},reveal:selector=>{const el=document.querySelector(selector);document.querySelectorAll('.tutorial-focus').forEach(x=>x.classList.remove('tutorial-focus'));if(el)el.classList.add('tutorial-focus');}});
   const assetStatus = () => { const p = globalThis.PixelAssets; text('asset-status', p.status === 'ready' ? '本地 CC0 像素图集已就绪' : '部分图集加载失败，已使用简化后备画面。可重新打开页面重试。'); $('asset-status').classList.toggle('asset-warning', p.status !== 'ready'); render(); };
   globalThis.PixelAssets.ready.then(assetStatus);
   window.addEventListener('pagehide', () => { if (started && storageAvailable) save(false); });
-  $('seed-input').value = sim.config.seed; classDescription(); editor.defaults(sim.character.classId); render(true); $('create-dialog').showModal();
+  $('seed-input').value = sim.config.seed; classDescription(); editor.defaults(sim.character.classId); render(true); $('create-dialog').showModal(); tutorial?.update(sim);
 })();

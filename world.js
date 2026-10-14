@@ -4,6 +4,7 @@
   const E = typeof module !== 'undefined' && module.exports ? require('./events.js') : root.AdventureEvents;
   const L = typeof module !== 'undefined' && module.exports ? require('./living-world.js') : root.LivingWorld;
   const C = typeof module !== 'undefined' && module.exports ? require('./character-card.js') : root.CharacterCard;
+  const S = typeof module !== 'undefined' && module.exports ? require('./story-rules.js') : root.SagaRules;
   const F = typeof module !== 'undefined' && module.exports ? require('./progression.js') : root.FateRules;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const copy = value => JSON.parse(JSON.stringify(value));
@@ -146,7 +147,7 @@
       this.random = new Random(this.config.seed); this.world = new World(); this.character = createCharacter(config);
       this.agent = new Agent(); this.events = new E.EventEngine(); this.phase = 'world'; this.status = 'alive';
       this.actions = 0; this.mission = 'forest'; this.destination = null; this.pending = null;
-      this.dungeon = null; this.fieldCombat = null; this.lastRest = -1000;
+      this.dungeon = null; this.fieldCombat = null; this.lastRest = -1000; S.install(this.world);
       this.record('birth', '冒险开始', `${this.character.name}在边境小镇醒来，携带 24 金币与 2 瓶治疗药水。`,
         `${this.character.name}带着${GOALS[this.character.goal]}的愿望来到艾尔文边境。`, { seed: this.config.seed });
     }
@@ -161,7 +162,7 @@
       const world = this.world;
       world.history.push({ id: ++world.recordId, time: world.minutes, region: this.character.position.region, type, title, text, story, facts: copy(facts) });
       if (world.history.length > 2000) { world.history.shift(); world.archived++; }
-      F.onFact(this,type,facts,title);
+      S.onFact(this,type,facts); F.onFact(this,type,facts,title);
     }
     remember(id, note) {
       const memory = this.character.memories.find(m => m.id === id);
@@ -322,6 +323,7 @@
     }
     dungeonStep() {
       if(!this.dungeon.encounters.battle&&F.maintenance(this))return;
+      if(!this.dungeon.encounters.battle&&S.tryDungeon(this))return;
       const d = this.dungeon, c = this.character;
       const decision = this.agent.decide({ character: c }, () => this.random.next());
       if (decision.action === 'potion') { this.intention('恢复生命', decision.reason); this.potion(); return; }
@@ -357,6 +359,7 @@
       }
     }
     townStep() {
+      if(S.tryTown(this))return;
       if(F.maintenance(this))return;
       const c = this.character;
       const followup = E.EVENTS.find(e => e.id === 'merchant_return');
@@ -370,12 +373,13 @@
       }
       const hour = this.world.clock.hour;
       if (c.hp < c.maxHp * .95 || c.fatigue > 15 || ((hour >= 22 || hour < 6) && c.fatigue > 8)) {
-        const cost = c.gold >= 6 ? 6 : 0, healed = c.maxHp - c.hp;
+        const lodging = L.price(this.world,'inn');
+        const cost = c.gold >= lodging ? lodging : 0, healed = c.maxHp - c.hp;
         c.gold -= cost; c.hp = c.maxHp; c.fatigue = 0; this.time(cost ? 480 : 600); this.lastRest = this.world.minutes;
         this.intention('旅馆休息', '回到安全小镇后恢复生命与疲劳，再准备下一趟旅程。');
-        this.record('rest', '旅馆休息', `${cost ? '支付 6 金币入住旅馆' : '金币不足，使用小镇公共铺位'}，休息 ${cost ? 8 : 10} 小时，恢复 ${healed} HP，疲劳归零。`); return;
+        this.record('rest', '旅馆休息', `${cost ? `支付 ${cost} 金币入住旅馆` : '金币不足，使用小镇公共铺位'}，休息 ${cost ? 8 : 10} 小时，恢复 ${healed} HP，疲劳归零。`); return;
       }
-      const price = this.world.flags.merchantDiscount ? 6 : 8;
+      const price = L.price(this.world,'potion');
       if (c.potions < 2 && c.gold >= price) {
         c.gold -= price; c.potions++; this.time(10); this.record('trade', '购买药水', `花费 ${price} 金币购买 1 瓶治疗药水，现有 ${c.potions} 瓶。`, undefined, { price, potions: c.potions }); return;
       }
@@ -392,6 +396,8 @@
     }
     chooseDestination() {
       const c = this.character, t = c.traits;
+      const story = S.target(this);
+      if(story&&c.fatigue<55&&c.hp/c.maxHp>this.agent.threshold(c)+.12){this.mission=story.action;this.destination={...story.target};this.intention('推进已知主线',story.reason);return;}
       const sites = SITES.filter(p => this.world.minutes - (this.world.siteTimes[D.keyOf(p.x, p.y)] ?? -1000) >= 240);
       const candidates = sites.map((p, index) => ({ action: 'forest', target: p,
         score: 35 + t.curiosity * .15 + t.greed * .1 - distance(c.position, p) * .6 + index +
@@ -426,7 +432,7 @@
         if (!path.length) throw new Error('公开道路应当连通');
         const fromTown = c.position.region === 'town';
         c.position = { ...path[0], region: distance(path[0], TOWN) === 0 ? 'town' : 'forest' };
-        c.moves++; this.time(10, 1.5);
+        c.moves++; this.time(10, this.world.flags.roadSafety?1:1.5);
         if (fromTown) this.record('region', '进入北部森林', '冒险者离开小镇，在世界道路上逐格前行。');
         if (c.position.region === 'town') this.record('region', '回到边境小镇', '冒险者沿道路回到小镇，准备结算物资和休息。');
         return;
@@ -434,6 +440,7 @@
       if (this.mission === 'ruins') { this.enterDungeon(); return; }
       const key = D.keyOf(c.position.x, c.position.y);
       this.world.siteTimes[key] = this.world.minutes; this.world.scouting++; this.destination = null;
+      if (S.tryForest(this)) return;
       if (L.tryForest(this, D)) return;
       const definition = this.events.select(this.context, () => this.random.next());
       if (definition) { this.startEvent(definition); return; }
@@ -443,7 +450,7 @@
       } else { this.time(10); this.record('survey', '检查林间道路', '这一带的补给已采完，记录路口后继续旅行。'); }
     }
     step() {
-      if (this.status === 'dead') return false;
+      if (this.status !== 'alive') return false;
       this.actions++;
       if (this.pending) this.resolveEvent();
       else if (this.combat?.battle) this.combatStep();
@@ -455,7 +462,8 @@
       } else if ((c.goal === 'wealth' && c.gold >= 100) || (c.goal === 'survive' && this.world.clock.day >= 4)) {
         this.record('goal', '初始目标达成', `${GOALS[c.goal]}已达成，接下来继续探索边境。`); this.remember('goalAchieved', GOALS[c.goal]); c.goal = 'explore';
       }
-      return this.status !== 'dead';
+      S.afterStep(this);
+      return this.status === 'alive';
     }
     toSave() {
       const serializeCombat = combat => combat ? { monsters: combat.monsters, discovered: [...combat.discovered], kills: combat.kills,
@@ -475,7 +483,7 @@
       sim.character.abilities = sim.character.abilities || characterAbilities(sim.character.classId);
       sim.character.level = sim.character.level || 1;
       sim.character.profile = sim.character.profile ? C.normalize(sim.character.profile) : C.fromConfig(sim.character);
-      F.install(sim.character);
+      F.install(sim.character); S.install(sim.world);
       for (const key of ['phase', 'status', 'actions', 'mission', 'destination', 'pending', 'lastRest']) sim[key] = save[key];
       const restoreCombat = data => {
         if (!data) return null;
@@ -498,9 +506,9 @@
     const number = (n, min, max = Number.MAX_SAFE_INTEGER) => Number.isFinite(n) && n >= min && n <= max;
     const point = (p, size) => p && Number.isInteger(p.x) && Number.isInteger(p.y) && number(p.x, 0, size - 1) && number(p.y, 0, size - 1);
     const grid = (g, size, values) => Array.isArray(g) && g.length === size && g.every(row => Array.isArray(row) && row.length === size && row.every(v => values.includes(v)));
-    if (!save || save.version !== 3 || !save.config || !save.world || !save.character || !['world', 'dungeon'].includes(save.phase) || !['alive', 'dead'].includes(save.status)) fail();
+    if (!save || save.version !== 3 || !save.config || !save.world || !save.character || !['world', 'dungeon'].includes(save.phase) || !['alive', 'dead', 'complete'].includes(save.status)) fail();
     const c = save.character, w = save.world;
-    if (!L.validate(w) || !F.valid(c) || c.rpg&&c.rpg.lastPrayer>w.minutes) fail();
+    if (!L.validate(w) || !S.valid(w) || !F.valid(c) || c.rpg&&c.rpg.lastPrayer>w.minutes) fail();
     if (c.abilities && !ABILITIES.every(key => Number.isInteger(c.abilities[key]) && number(c.abilities[key], 3, 20))) fail();
     if (c.level !== undefined && (!Number.isInteger(c.level) || !number(c.level, 1, 20))) fail();
     if (c.profile) {
@@ -524,7 +532,7 @@
       Object.keys(w.eventDone).some(id => !E.EVENTS.some(e => e.id === id)) || Object.values(w.siteTimes).some(t => !number(t, 0, w.minutes))) fail();
     if (JSON.stringify(w.roadMap) !== JSON.stringify(makeRoads()) || Object.values(w.eventDone).some(done => done !== true) ||
       w.history.some((r, i) => i && (r.time < w.history[i - 1].time || r.id <= w.history[i - 1].id))) fail();
-    if (save.status === 'dead' && c.hp !== 0 || save.status === 'alive' && c.hp === 0) fail();
+    if (save.status === 'dead' && c.hp !== 0 || save.status !== 'dead' && c.hp === 0 || save.status === 'complete' && (!w.saga?.ending || save.phase!=='world' || c.position.region!=='town')) fail();
     if (w.flags.merchantChoice && (!['help', 'ignore'].includes(w.flags.merchantChoice) || !number(w.flags.merchantDue, 0))) fail();
     if(save.pending?.npcLock&&(save.pending.id!=='merchant_return'||save.pending.npcLock!=='merchant'||c.position.region!=='town'||!number(save.pending.startedAt,0,w.minutes)))fail();
     if (save.pending && (!E.EVENTS.some(e => e.id === save.pending.id) || w.eventDone[save.pending.id])) fail();

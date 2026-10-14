@@ -113,7 +113,7 @@
     const c=sim.character,r=c.rpg,b=r.battle,target=sim.combat.battle.target;
     if(c.classId==='warrior'&&r.grace>=50&&!b.miracle&&sim.combat.battle.round===1){miracle(sim,'不屈誓言','神眷充足，准备格挡4伤害并在敌人命中时反击3伤害');b.guard=4;b.counter=3;sim.time(1,.5);sim.combat.battle.turn='skeleton';return {consumed:true};}
     if(c.classId==='mage'&&r.mp<=r.maxMp*.75&&r.grace>=35&&!b.miracle){const restored=Math.min(5,r.maxMp-r.mp);r.mp+=restored;miracle(sim,'秘法回响','法力已消耗，实际恢复'+restored+'法力并强化下一法术3伤害');b.echo=3;sim.time(1,.5);sim.combat.battle.turn='skeleton';return {consumed:true};}
-    if(c.classId==='warrior'&&(c.hp/c.maxHp<.58||sim.combat.battle.round===2&&target.hp>3&&c.traits.caution>=50)&&r.stamina>=2&&!b.guard){use(sim,'守护姿态',2,'stamina','生命偏低，减免敌人下一次攻击4伤害');b.guard=4;sim.time(1,.5);sim.combat.battle.turn='skeleton';return {consumed:true};}
+    if(c.classId==='warrior'&&(c.hp/c.maxHp<.58||sim.combat.battle.round===2&&target.hp>3&&c.traits.caution>=50)&&r.stamina>=2&&!b.guard){use(sim,'守护姿态',2,'stamina','生命偏低或预计承受下一轮攻击，减免敌人下一次攻击4伤害');b.guard=4;sim.time(1,.5);sim.combat.battle.turn='skeleton';return {consumed:true};}
     if(c.classId==='warrior'&&r.stamina>=2&&sim.combat.battle.round%2===1){use(sim,'盾击',2,'stamina','敌人仍有行动能力，命中后削弱下一次命中加值2');return {skill:'盾击'};}
     if(c.classId==='rogue'&&sim.combat.battle.round===1&&!b.backstab&&r.stamina>=2){use(sim,'背刺',2,'stamina','首次交锋抓住破绽，命中额外1d6伤害；本场一次');b.backstab=true;return {skill:'背刺'};}
     if(c.classId==='mage'){

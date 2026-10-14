@@ -99,7 +99,7 @@ async function run() {
   const jobs = () => evaluate('testClock.jobs.size');
   const model = () => evaluate(`document.getElementById('save').click(); JSON.parse(localStorage.getItem('ai-dungeon-simulator:v0.3'))`);
   const create = async (classId = 'warrior', seed = 'world-browser-003') => {
-    await evaluate(`document.getElementById('class-input').value = '${classId}'; document.getElementById('class-input').dispatchEvent(new Event('change')); document.getElementById('name-input').value = '边境观察者'; document.getElementById('seed-input').value = '${seed}'; document.getElementById('create-form').requestSubmit()`);
+    await evaluate(`document.getElementById('class-input').value = '${classId}'; document.getElementById('class-input').dispatchEvent(new Event('change')); document.getElementById('name-input').value = '边境观察者'; document.getElementById('seed-input').value = '${seed}'; if(document.getElementById('endless-input'))document.getElementById('endless-input').checked=true; document.getElementById('create-form').requestSubmit()`);
   };
   const loadSnapshot = async snapshot => {
     await evaluate(`localStorage.setItem('ai-dungeon-simulator:v0.3', ${JSON.stringify(JSON.stringify(snapshot))})`);
@@ -119,6 +119,7 @@ async function run() {
     }
   };
   await send('Page.navigate', { url: fileUrl }); await waitReady();
+  if(await evaluate('typeof RavenTutorial!=="undefined"'))await click('tutorial-skip');
   if(await evaluate('typeof PixelAssets!=="undefined"')) assert.equal(await evaluate('PixelAssets.ready'), 'ready', 'All real atlases must load');
   if(await evaluate('typeof PixelAssets!=="undefined"')) {
     const check=await evaluate(`(()=>{const sim=new Adventure.Simulation({seed:'visual-purity'});sim.enterDungeon();const before=JSON.stringify(sim.toSave());const canvas=document.createElement('canvas'),v=new MapView(canvas);v.draw(sim,false);let unknown=0;const ratio=devicePixelRatio;for(let y=v.camera.y;y<v.camera.y+13;y++)for(let x=v.camera.x;x<v.camera.x+13;x++)if(sim.dungeon.explorer.known[y][x]===-1){if(location.protocol!=='file:'){const pixels=canvas.getContext('2d').getImageData((x-v.camera.x)*32*ratio,(y-v.camera.y)*32*ratio,32*ratio,32*ratio).data;for(let i=0;i<pixels.length;i+=4)if(pixels[i]!==8||pixels[i+1]!==12||pixels[i+2]!==19||pixels[i+3]!==255)throw Error('Fog leak');}unknown++;}for(let i=0;i<30;i++)v.draw(sim,false);return {pure:before===JSON.stringify(sim.toSave()),unknown,smoothing:canvas.getContext('2d').imageSmoothingEnabled,loaded:PixelAssets.files.every(k=>PixelAssets.images[k].naturalWidth>0)};})()`);
@@ -303,6 +304,37 @@ async function run() {
     }
     await loadSnapshot(baseline);console.log('v0.8 浏览器实景通过：同种子三职业自然神迹/升级/换装、真实截图、绑定神明/资源/成长显示。');
   }
+
+  if(await evaluate('typeof RavenTutorial!=="undefined"')) {
+    const baseline=await model();
+    for(const width of [1240,390]){
+      await send('Emulation.setDeviceMetricsOverride',{width,height:940,deviceScaleFactor:1,mobile:width<500});
+      await click('tutorial-replay');assert.equal(await jobs(),0);
+      await screenshot('raven-welcome-'+width+'.png');
+      await click('tutorial-next');await click('new-adventure');await click('tutorial-next');
+      assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-dungeon:tutorial:v1')).step"),2);
+      await create('mage','world-browser-003');assert.equal(await jobs(),0,'Guide pauses a running creation and keeps prior state');
+      await screenshot('raven-world-'+width+'.png');await click('tutorial-next');assert.equal(await jobs(),1,'Next restores earlier running state');
+      for(let stage=3;stage<=6;stage++){
+        for(let i=0;i<1600&&await evaluate("document.getElementById('tutorial-next').disabled");i++)await tick();
+        assert.equal(await evaluate("document.getElementById('tutorial-next').disabled"),false,'Guide must be unlocked by actual facts');
+        assert.equal(await jobs(),0);if(stage===4||stage===5)await screenshot('raven-step-'+stage+'-'+width+'.png');
+        await click('tutorial-next');
+      }
+      assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-dungeon:tutorial:v1')).done"),true);
+      assert.equal(await evaluate("document.getElementById('raven').hidden"),true);assert.equal(await jobs(),1);
+      assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
+    }
+    await click('tutorial-replay');await click('tutorial-skip');assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-dungeon:tutorial:v1')).skipped"),true);
+    await send('Emulation.setDeviceMetricsOverride',{width:1240,height:940,deviceScaleFactor:1,mobile:false});
+    await loadSnapshot(baseline);await click('biography');assert.ok(await evaluate("document.getElementById('biography-text').textContent.includes('事实#')"));await screenshot('biography-v09.png');await evaluate("document.getElementById('biography-dialog').close()");
+    await click('new-adventure');await evaluate("document.getElementById('endless-input').checked=false;document.getElementById('name-input').value='星辉见证者';document.getElementById('class-input').value='mage';document.getElementById('class-input').dispatchEvent(new Event('change'));document.getElementById('seed-input').value='world-browser-003';document.getElementById('create-form').requestSubmit()");await speed('fast');
+    for(let batch=0;batch<60&&await jobs();batch++)await evaluate('for(let i=0;i<50&&testClock.jobs.size;i++)testClock.tick()');
+    const ended=await model();assert.equal(ended.status,'complete');assert.ok(ended.world.saga.ending);assert.equal(await jobs(),0);await screenshot('ending-v09.png');
+    assert.ok(ended.world.saga.milestones.some(x=>x.type==='saga'));assert.ok(await evaluate("document.getElementById('status').textContent.includes('秘法')"));await loadSnapshot(baseline);
+    console.log('v0.9 浏览器通过：桌面/390px欢迎→创建→位置→真实NPC→判定→成长→保存教程、暂停恢复/跳过/重播、真实传记与自然阶段结局。');
+  }
+
   // 再打开没有虚拟时钟的页面，检查真实播放与暂停。
   await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
   await send('Page.navigate', { url: 'about:blank' }); await send('Page.navigate', { url: fileUrl }); await waitReady();

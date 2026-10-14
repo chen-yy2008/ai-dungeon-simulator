@@ -19,7 +19,7 @@ assert.equal({}.polluted, undefined);
 const imported = structuredClone(basic); imported.name = '远行者'; imported.level = 20; imported.abilities.STR = 20;
 imported.identity = '边境学者'; imported.background = '<script>globalThis.pwned=true</script>';
 imported.basicAbilities = ['一段能力描述，不执行代码']; imported.importantMemories = ['曾在故乡见过一位商人'];
-const sim = new Simulation({ seed: 'card-replay', card: imported });
+const sim = new Simulation({endless:true, seed: 'card-replay', card: imported });
 assert.equal(sim.character.hp, 30); assert.equal(sim.character.ac, 15); assert.equal(sim.character.damageSides, 8);
 assert.equal(sim.character.level, 20); assert.equal(globalThis.pwned, undefined);
 assert.ok(sim.character.memories[0].id.startsWith('background-card-'));
@@ -27,7 +27,7 @@ assert.ok(sim.character.memories[0].note.startsWith('角色背景：'));
 assert.equal(sim.world.flags.merchantChoice, undefined);
 const exported = Card.exportCharacter(sim.character);
 assert.equal(exported.identity, imported.identity); assert.equal(exported.hp, undefined);
-const legacy = new Simulation({ seed: 'old-save' }); for (let i = 0; i < 90; i++) legacy.step();
+const legacy = new Simulation({endless:true, seed: 'old-save' }); for (let i = 0; i < 90; i++) legacy.step();
 const save = legacy.toSave(); delete save.character.profile;
 const migrated = Simulation.fromSave(save);
 for (const key of ['hp', 'gold', 'potions', 'fatigue', 'inventory', 'memories']) assert.deepEqual(migrated.character[key], save.character[key]);
@@ -56,7 +56,7 @@ let actions = 0;
 for (const classId of ['warrior', 'rogue', 'mage']) for (const risk of [0, 100]) for (const altruism of [0, 100]) {
   const card = Card.fromConfig({ classId }); card.behavior = { riskTolerance: risk, altruism, discipline: 85 };
   card.values = altruism ? ['同情', '责任'] : ['财富'];
-  const a = new Simulation({ seed: 'profile-' + classId + risk + altruism, card });
+  const a = new Simulation({endless:true, seed: 'profile-' + classId + risk + altruism, card });
   for (let i = 0; i < 2000; i++) {
     a.step(); actions++; assert.ok(a.character.hp >= 0 && a.character.hp <= a.character.maxHp);
     assert.ok(a.character.gold >= 0 && a.character.fatigue >= 0 && a.character.fatigue <= 100);

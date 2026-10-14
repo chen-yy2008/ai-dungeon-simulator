@@ -3,14 +3,14 @@ const assert = require('node:assert/strict');
 const { Simulation, TOWN, SITES } = require('../world.js');
 const L = require('../living-world.js');
 const clone = x => JSON.parse(JSON.stringify(x));
-const sim = new Simulation({ seed: 'npcs' });
+const sim = new Simulation({endless:true, seed: 'npcs' });
 assert.equal(Object.keys(sim.world.npcs).length, 4);
 sim.world.minutes = 12 * 60; L.sync(sim.world);
 assert.equal(sim.world.npcs.mage.location.region, 'forest');
 sim.world.minutes = 20 * 60; L.sync(sim.world);
 assert.equal(sim.world.npcs.mage.location.region, 'town'); assert.equal(sim.world.npcs.guild.available, false);
 for (const definition of L.DEFINITIONS) for (const branch of ['success', 'failure', 'declined']) {
-  const s = new Simulation({ seed: 'chain-' + definition.id });
+  const s = new Simulation({endless:true, seed: 'chain-' + definition.id });
   s.world.flags.merchantChoice = 'help'; s.world.flags.merchantDue = 0;
   s.world.minutes = 18 * 60; L.sync(s.world); s.character.position = { ...TOWN, region: 'town' };
   for (const q of Object.values(s.world.quests)) { q.stage = 'complete'; q.branch = 'declined'; }
@@ -28,7 +28,7 @@ for (const definition of L.DEFINITIONS) for (const branch of ['success', 'failur
   assert.equal(resumed.character.gold - before, branch === 'success' ? definition.reward : branch === 'failure' ? 2 : 0);
   const finished = resumed.toSave(); assert.equal(L.tryTown(resumed), false); assert.deepEqual(resumed.toSave(), finished);
 }
-const debts = new Simulation({ seed: 'debt' });
+const debts = new Simulation({endless:true, seed: 'debt' });
 for (const q of Object.values(debts.world.quests)) q.stage = 'complete';
 debts.world.quests.favor = { stage: 'followup', branch: 'borrowed', due: 0 };
 debts.world.flags.innDebt = 8; debts.character.gold = 0;
@@ -43,7 +43,7 @@ const migrated = Simulation.fromSave(legacy); assert.equal(Object.keys(migrated.
 const malformed = migrated.toSave(); malformed.world.npcs.mage.relationship = 1000; assert.throws(() => Simulation.fromSave(malformed));
 let count = 0;
 for (let seed = 0; seed < 12; seed++) {
-  const a = new Simulation({ seed: 'living-' + seed }), b = new Simulation({ seed: 'living-' + seed });
+  const a = new Simulation({endless:true, seed: 'living-' + seed }), b = new Simulation({endless:true, seed: 'living-' + seed });
   for (let i = 0; i < 3000 && a.status !== 'dead'; i++) {
     a.step(); b.step(); count++;
     if (i % 100 === 0) assert.deepEqual(a.toSave(), b.toSave());

@@ -1,5 +1,5 @@
 {
-  "version": "0.8.0",
+  "version": "0.9.0",
   "branch": "main",
   "files": [
     ".gitignore",
@@ -103,7 +103,19 @@
     "docs/v08/miracle-mage.png",
     "docs/v08/upgrade-warrior.png",
     "docs/v08/upgrade-rogue.png",
-    "docs/v08/upgrade-mage.png"
+    "docs/v08/upgrade-mage.png",
+    "story-rules.js",
+    "narrative.js",
+    "tutorial.js",
+    "tests/story.cjs",
+    "docs/story-transitions.md",
+    "docs/releases/v0.9-report.md",
+    "docs/v09/raven-welcome-1240.png",
+    "docs/v09/raven-world-390.png",
+    "docs/v09/raven-step-4-390.png",
+    "docs/v09/raven-step-5-1240.png",
+    "docs/v09/biography-v09.png",
+    "docs/v09/ending-v09.png"
   ],
   "runtimeAssets": [
     "assets/field.png",

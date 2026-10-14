@@ -33,7 +33,7 @@ let total = 0, deaths = 0, entries = 0, completions = 0;
 const covered = new Set();
 for (const [classIndex, classId] of Object.keys(CLASSES).entries()) {
   for (let seed = 1; seed <= 40; seed++) {
-    const sim = new Simulation({ seed: `stress-${seed}`, classId, traits: profiles[seed % 3], goal: ['explore', 'wealth', 'survive'][(seed + classIndex) % 3] });
+    const sim = new Simulation({endless:true, seed: `stress-${seed}`, classId, traits: profiles[seed % 3], goal: ['explore', 'wealth', 'survive'][(seed + classIndex) % 3] });
     let movedAtCheckpoint = 0;
     for (let i = 0; i < 5000 && sim.status !== 'dead'; i++) {
       const beforeTime = sim.world.minutes, beforePhase = sim.phase, beforePosition = { ...sim.character.position }, beforeMoves = sim.character.moves;
@@ -64,8 +64,8 @@ assert.ok(entries > 60 && completions > 30);
 assert.equal(covered.size, EVENTS.length, '长期模拟应覆盖事件目录');
 
 // 同种子、同角色条件重现；事件、战斗、撤退各阶段保存后继续也必须一致。
-const original = new Simulation({ seed: 'world-browser-003' });
-const twin = new Simulation({ seed: 'world-browser-003' });
+const original = new Simulation({endless:true, seed: 'world-browser-003' });
+const twin = new Simulation({endless:true, seed: 'world-browser-003' });
 const stages = new Set();
 for (let i = 0; i < 1600; i++) {
   original.step(); twin.step();
@@ -76,7 +76,7 @@ for (let i = 0; i < 1600; i++) {
     const a = Simulation.fromSave(original.toSave()), b = Simulation.fromSave(original.toSave());
     for (let step = 0; step < 200; step++) { a.step(); b.step(); }
     assert.deepEqual(a.toSave(), b.toSave());
-    const direct = new Simulation({ seed: 'world-browser-003' });
+    const direct = new Simulation({endless:true, seed: 'world-browser-003' });
     for (let step = 0; step < original.actions + 200; step++) direct.step();
     assert.deepEqual(a.toSave(), direct.toSave(), '存取后续演必须与从出生连续模拟一致');
   }
@@ -86,7 +86,7 @@ assert.ok(stages.has('event') && stages.has('combat') && stages.has('world') && 
 // 所有事件选项合法结算；成功和失败都由规则输出实际变化。
 for (const definition of EVENTS) {
   for (const action of definition.actions) for (const randomValue of action.check ? [0, .999] : [.5]) {
-    const sim = new Simulation({ seed: 'event-fixture' });
+    const sim = new Simulation({endless:true, seed: 'event-fixture' });
     sim.character.gold = 100; sim.character.potions = 5; sim.character.hp = 15;
     if (definition.locations.includes('ruins')) sim.enterDungeon();
     else if (definition.locations.includes('forest')) sim.character.position = { ...SITES[0], region: 'forest' };
@@ -108,7 +108,7 @@ for (const definition of EVENTS) {
 
 // 商人因果链必须分时、分地点：尚未满足条件不能输出未来奖励。
 for (const choice of ['help', 'ignore']) {
-  const sim = new Simulation({ seed: 'merchant-chain' });
+  const sim = new Simulation({endless:true, seed: 'merchant-chain' });
   sim.character.position = { ...SITES[0], region: 'forest' };
   const first = EVENTS.find(e => e.id === 'merchant'), follow = EVENTS.find(e => e.id === 'merchant_return');
   sim.agent.eventAction = definition => ({ action: definition.actions.find(a => a.id === choice) || definition.actions[0], reason: '固定行动检查' });
@@ -139,12 +139,12 @@ assert.equal(engine.available(merchant, { gold: 0, potions: 0 }).length, 1);
 assert.equal(agent.eventAction(merchant, merchant.actions, createCharacter({ traits: { kindness: 100, greed: 0, caution: 0 } }), () => .5).action.id, 'potion');
 
 // 无钱无药也不能无限购买或无限休息；公共铺位是恢复兜底。
-const poor = new Simulation({ seed: 'poor' }); poor.character.gold = 0; poor.character.potions = 0; poor.character.hp = 1;
+const poor = new Simulation({endless:true, seed: 'poor' }); poor.character.gold = 0; poor.character.potions = 0; poor.character.hp = 1;
 for (let i = 0; i < 20; i++) poor.step();
 assert.equal(poor.character.gold, 0); assert.ok(poor.character.moves > 0); assert.ok(poor.character.hp > 1);
 
 // 用合法战斗状态确定性覆盖死亡停止，而非等待偶然随机死亡。
-const doomed = new Simulation({ seed: 'death' }); doomed.enterDungeon();
+const doomed = new Simulation({endless:true, seed: 'death' }); doomed.enterDungeon();
 doomed.character.hp = 1; doomed.character.potions = 0;
 doomed.dungeon.encounters.battle = { target: doomed.dungeon.encounters.monsters[0], turn: 'skeleton', round: 1 };
 doomed.random.next = () => .999; doomed.step();
