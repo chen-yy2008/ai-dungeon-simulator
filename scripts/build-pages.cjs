@@ -1,0 +1,24 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+function argument(name, fallback) { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : fallback; }
+const source = path.resolve(argument('--source', path.join(__dirname, '..')));
+const output = path.resolve(argument('--output', path.join(source, 'test-output', 'pages-site')));
+const release = JSON.parse(fs.readFileSync(path.join(source, 'release.json'), 'utf8'));
+const tag = process.env.DEPLOY_TAG;
+if (tag && tag !== 'v' + release.version) throw new Error('Tag and release.json version mismatch');
+const html = fs.readFileSync(path.join(source, 'index.html'), 'utf8');
+const assets = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)=["']([^"']+)["']/g)].map(m => m[1]);
+const files = [...new Set(['index.html', ...assets])];
+fs.mkdirSync(output, { recursive: true });
+// Refuse reuse containing unrelated files; no recursive deletion of user directories.
+for (const name of fs.readdirSync(output)) if (![...files, 'version.json', '.nojekyll'].includes(name)) throw new Error('Output contains unrelated data');
+for (const file of files) {
+  if (!/^[A-Za-z0-9_.-]+$/.test(file) || !release.files.includes(file)) throw new Error(`Unapproved runtime asset: ${file}`);
+  const input = path.join(source, file);
+  if (!fs.lstatSync(input).isFile() || fs.lstatSync(input).isSymbolicLink()) throw new Error('Unsafe asset');
+  fs.copyFileSync(input, path.join(output, file));
+}
+fs.writeFileSync(path.join(output, '.nojekyll'), '');
+fs.writeFileSync(path.join(output, 'version.json'), JSON.stringify({ version: release.version }) + '\n');
+console.log(`Pages artifact: ${release.version}; ${files.length} runtime files only. No profiles, docs or credentials copied.`);

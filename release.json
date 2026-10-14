@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.5.0",
   "branch": "main",
   "files": [
     ".gitignore",
@@ -32,6 +32,13 @@
     "docs/specs/v0.5-world.md",
     "docs/specs/v0.6-character.md",
     "tests/ui.cjs",
-    "docs/releases/v0.4-report.md"
+    "docs/releases/v0.4-report.md",
+    "living-world.js",
+    "tests/living-world.cjs",
+    "scripts/build-pages.cjs",
+    "tests/pages.cjs",
+    "docs/pages-workflow.yml",
+    "docs/releases/v0.5-report.md",
+    "scripts/deploy-pages.ps1"
   ]
 }

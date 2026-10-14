@@ -1,0 +1,15 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+const root = path.resolve(__dirname, '..');
+const output = path.join(root, 'test-output', `pages-${Date.now()}`);
+const result = spawnSync(process.execPath, ['scripts/build-pages.cjs', '--output', output], { cwd: root, encoding: 'utf8' });
+assert.equal(result.status, 0, result.stderr);
+const files = fs.readdirSync(output);
+assert.ok(files.includes('index.html') && files.includes('version.json'));
+assert.ok(!files.some(f => /test|cookie|credential|\.md|\.tools/i.test(f)));
+const html = fs.readFileSync(path.join(output, 'index.html'), 'utf8');
+for (const match of html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)=["']([^"']+)["']/g)) assert.ok(fs.existsSync(path.join(output, match[1])));
+console.log('Pages artifact checks passed: relative resources exist; runtime-only artifact.');

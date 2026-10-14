@@ -27,6 +27,7 @@
 5. 执行 `powershell -NoProfile -File scripts/publish.ps1 -Version vX.Y.Z -DryRun`。该命令运行必要测试与预检，不暂存、不提交、不创建 Tag、不推送。
 6. 预检通过后执行 `powershell -NoProfile -File scripts/publish.ps1 -Version vX.Y.Z -Summary "简短版本说明"`。脚本重新运行测试，按 release.json 的准确路径暂存，提交、创建注释标签，并原子推送当前发布分支和指定标签。
 7. 验证远程分支与标签对象 SHA，最终附上版本号、更新内容、实际测试结果、仓库及版本标签链接。
+8. 当前 CLI 没有 workflow scope 时使用已授权官方分支式 Pages：`scripts/deploy-pages.ps1 -Tag vX.Y.Z`，只打包远程已核验且重新测试过的标签，安全快进更新独立 gh-pages，随后核对托管 Pages 构建及 HTTP/在线 smoke。普通 main 修改不得部署。待补充 workflow 权限后才启用 docs/pages-workflow.yml 的自定义方案，不绕过权限写入 .github。
 
 ### 错误处理
 

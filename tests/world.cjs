@@ -90,7 +90,7 @@ for (const definition of EVENTS) {
     sim.character.gold = 100; sim.character.potions = 5; sim.character.hp = 15;
     if (definition.locations.includes('ruins')) sim.enterDungeon();
     else if (definition.locations.includes('forest')) sim.character.position = { ...SITES[0], region: 'forest' };
-    if (definition.id === 'merchant_return') sim.world.flags = { merchantChoice: 'help', merchantDue: sim.world.minutes };
+    if (definition.id === 'merchant_return') { sim.world.flags = { merchantChoice: 'help', merchantDue: sim.world.minutes }; sim.time(120); }
     const context = sim.context, engine = sim.events;
     assert.ok(engine.eligible(definition, context));
     const expected = engine.resolve(definition, action, context, () => randomValue);

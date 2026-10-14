@@ -76,7 +76,7 @@ async function run() {
     window.setTimeout = (fn, delay) => { const id = ++testClock.next; testClock.jobs.set(id, { fn, delay }); return id; };
     window.clearTimeout = id => testClock.jobs.delete(id);
   ` });
-  const fileUrl = pathToFileURL(path.resolve(__dirname, '../index.html')).href;
+  const fileUrl = process.env.BROWSER_URL || pathToFileURL(path.resolve(__dirname, '../index.html')).href;
   const waitReady = async () => {
     for (let i = 0; i < 100; i++) {
       if (await evaluate(`document.getElementById('create-dialog')?.open === true`)) return;

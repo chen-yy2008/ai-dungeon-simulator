@@ -54,6 +54,11 @@
         else { this.rect(px + 9, py + 12, 6, 3, '#2e3d33'); this.rect(px + 17, py + 22, 3, 3, '#52604b'); }
       }
       this.town(A.TOWN, cell);
+      if (sim.world.npcs) for (const [index, n] of Object.values(sim.world.npcs).entries()) {
+        if (!n.available) continue;
+        const p = n.location, offset = p.region === 'town' ? index * 8 - 14 : 0;
+        this.rect((p.x + .5) * cell + offset, p.y * cell - 7, 5, 7, ['#e5ca8b', '#94ae86', '#a1b8c8', '#b39bc5'][index]);
+      }
       this.text('北 部 森 林', 230, 108, '#c1c9a9', 18);
       this.text('公开道路 · 林间路口', 230, 130, '#91a38c', 11);
       for (const site of A.SITES) {

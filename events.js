@@ -66,6 +66,7 @@
   class EventEngine {
     eligible(definition, context) {
       if (context.done[definition.id] || !definition.locations.includes(context.region)) return false;
+      if (definition.id === 'merchant_return' && context.npcAvailable?.merchant === false) return false;
       return !definition.when || (context.flags.merchantChoice && context.time >= context.flags.merchantDue);
     }
     available(definition, context) {
