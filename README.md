@@ -2,11 +2,11 @@
 
 v0.5 新增米菈（旅馆）、赛伦（商旅）、奥林（公会）、薇娅（法师）的真实日程、在场条件、关系与记忆，以及失踪商队、遗迹测绘、道路威胁、药剂研究、欠下人情五条有限分支链。行动/调查/实际战斗结束后至少过一个游戏日，角色再与在场 NPC 回访才结算后果。原商人救助仍保留并遵循返镇与市集时间。NPC 关系与已接受委托进入评分；疲劳和生命安全仍优先。
 
-在线体验：[艾尔文边境 v0.6.0](https://chen-yy2008.github.io/ai-dungeon-simulator/)。已核对版本、正式标签源 SHA 与全部资源，在线完整浏览器检查通过。官方自定义 Actions 构建/部署成功；仅正式标签或明确重部署更新网站，main 日常提交不更新。运行包不含文档、角色卡示例、浏览器配置或密钥。
+在线体验：[艾尔文边境 v0.7.0](https://chen-yy2008.github.io/ai-dungeon-simulator/)。正式标签源SHA、35项运行资源和在线完整浏览器/手机/像素检查通过，Actions 38544111128 构建与部署成功。
 
 v0.4 重制观察界面：原创羊皮纸人物卡、六维属性、折叠详情、故事/事实/骰子三类有限记录、逐格视觉过渡及窄屏排版。六维暂不重算原有战斗参数，等级 1 明确为原型占位，没有经验升级。v0.3 存档在读取时补齐新字段，保留时间、战斗与随机源。
 
-首次基准版本号为 **v0.3.0**，本轮目标版本为 **v0.7.0**（部署核验见进度）。后续正式版本的自动提交、标签与推送规范见 [AGENTS.md](AGENTS.md)、[发布指南](docs/PUBLISHING.md) 和 [CHANGELOG.md](CHANGELOG.md)。发布脚本为 `scripts/publish.ps1`，审核文件清单与版本保存在 `release.json`。
+首次基准版本号为 **v0.3.0**，当前正式版本为 **v0.7.0**。后续正式版本的自动提交、标签与推送规范见 [AGENTS.md](AGENTS.md)、[发布指南](docs/PUBLISHING.md) 和 [CHANGELOG.md](CHANGELOG.md)。发布脚本为 `scripts/publish.ps1`，审核文件清单与版本保存在 `release.json`。
 
 GitHub 公开仓库：[chen-yy2008/ai-dungeon-simulator](https://github.com/chen-yy2008/ai-dungeon-simulator)。
 
