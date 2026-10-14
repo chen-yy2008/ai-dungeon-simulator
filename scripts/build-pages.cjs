@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 function argument(name, fallback) { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : fallback; }
 const source = path.resolve(argument('--source', path.join(__dirname, '..')));
 const output = path.resolve(argument('--output', path.join(source, 'test-output', 'pages-site')));
@@ -20,5 +21,11 @@ for (const file of files) {
   fs.copyFileSync(input, path.join(output, file));
 }
 fs.writeFileSync(path.join(output, '.nojekyll'), '');
-fs.writeFileSync(path.join(output, 'version.json'), JSON.stringify({ version: release.version }) + '\n');
+const metadata = { version: release.version };
+if (tag) {
+  const result = spawnSync('git', ['-c', 'safe.directory=' + source.replace(/\\/g, '/'), '-C', source, 'rev-parse', tag + '^{commit}'], {encoding:'utf8'});
+  if (result.status !== 0 || !/^[a-f0-9]{40}$/.test(result.stdout.trim())) throw new Error('Cannot verify tagged source commit');
+  metadata.sourceCommit = result.stdout.trim();
+}
+fs.writeFileSync(path.join(output, 'version.json'), JSON.stringify(metadata) + '\n');
 console.log(`Pages artifact: ${release.version}; ${files.length} runtime files only. No profiles, docs or credentials copied.`);

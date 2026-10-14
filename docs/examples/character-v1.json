@@ -1,0 +1,45 @@
+{
+  "schema": "ai-dungeon-character",
+  "version": 1,
+  "name": "薇洛",
+  "classId": "rogue",
+  "identity": "边境测绘员",
+  "background": "为绘制边境道路而旅行，谨慎对待古老墓穴。",
+  "level": 1,
+  "abilities": {
+    "STR": 10,
+    "DEX": 16,
+    "CON": 12,
+    "INT": 12,
+    "WIS": 14,
+    "CHA": 10
+  },
+  "traits": {
+    "courage": 60,
+    "caution": 55,
+    "greed": 45,
+    "kindness": 65,
+    "curiosity": 70
+  },
+  "values": [
+    "知识",
+    "责任"
+  ],
+  "behavior": {
+    "riskTolerance": 35,
+    "altruism": 70,
+    "discipline": 80
+  },
+  "goal": "explore",
+  "shortGoal": "找到安全的遗迹入口",
+  "longGoal": "绘制一份可信的边境地图",
+  "basicAbilities": [
+    "路线记录与地形观察"
+  ],
+  "weaknesses": [
+    "畏惧亡灵"
+  ],
+  "importantMemories": [
+    "曾因贸然深入洞窟而受困"
+  ]
+}

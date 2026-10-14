@@ -3,18 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Dungeon Simulator v0.5.0 · 鲜活世界</title>
+  <title>AI Dungeon Simulator v0.6.0 · 角色系统进化</title>
   <link rel="stylesheet" href="style.css">
   <script src="core.js" defer></script>
   <script src="events.js" defer></script>
   <script src="living-world.js" defer></script>
+  <script src="character-card.js" defer></script>
   <script src="world.js" defer></script>
   <script src="view.js" defer></script>
+  <script src="card-editor.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
   <main class="app">
-    <header class="header"><div><p class="eyebrow">AI DUNGEON SIMULATOR / V0.5.0</p><h1>艾尔文边境<span class="header-seal">鲜活世界</span></h1><p class="subtitle">人们记得你的选择，世界也会。</p></div><div class="world-clock"><span>✦ 世界历 · 与播放速度独立</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
+    <header class="header"><div><p class="eyebrow">AI DUNGEON SIMULATOR / V0.6.0</p><h1>艾尔文边境<span class="header-seal">角色系统进化</span></h1><p class="subtitle">人们记得你的选择，世界也会。</p></div><div class="world-clock"><span>✦ 世界历 · 与播放速度独立</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
     <div class="toolbar" aria-label="模拟控制">
       <button id="toggle" class="primary" type="button">开始模拟</button>
       <select id="speed" aria-label="播放速度"><option value="slow">慢速 · 700 ms</option><option value="normal" selected>正常 · 250 ms</option><option value="fast">快速 · 60 ms</option></select>
@@ -64,10 +66,25 @@
         <label for="greed">贪婪 <output id="greed-value">45</output><input id="greed" name="greed" type="range" min="0" max="100" value="45"></label>
         <label for="kindness">善良 <output id="kindness-value">65</output><input id="kindness" name="kindness" type="range" min="0" max="100" value="65"></label>
         <label for="curiosity">好奇 <output id="curiosity-value">70</output><input id="curiosity" name="curiosity" type="range" min="0" max="100" value="70"></label>
-      </fieldset><div class="dialog-actions"><button class="secondary" type="button" data-close="create-dialog">暂不创建</button><button class="primary" type="submit">创建并开始冒险</button></div>
+      </fieldset>
+      <details class="card-editor"><summary>角色设定与 JSON 导入导出</summary>
+        <p class="hint">六维与设定等级不重算战斗。短/长期愿望和能力文本为背景；价值观、行为权重和弱点进入规则决策。</p>
+        <div class="form-grid"><label>身份<input id="identity-input" maxlength="80"></label><label>设定等级<input id="level-input" type="number" min="1" max="20" value="1" required></label></div>
+        <label>背景<textarea id="background-input" maxlength="1000" rows="3"></textarea></label>
+        <div id="ability-editor" class="form-grid"></div>
+        <div id="behavior-editor" class="form-grid"></div>
+        <label>价值观（探索、财富、责任、同情、自由、知识；以逗号分隔）<input id="values-input" maxlength="80"></label>
+        <label>弱点（畏惧亡灵、体力不足、冲动、不善交际；以逗号分隔）<input id="weaknesses-input" maxlength="80"></label>
+        <div class="form-grid"><label>短期愿望<input id="shortGoal-input" maxlength="160"></label><label>长期愿望<input id="longGoal-input" maxlength="160"></label></div>
+        <label>基本能力描述（每行一项；不执行法术）<textarea id="basicAbilities-input" rows="2"></textarea></label>
+        <label>重要背景记忆（每行一项；不视作当前世界事实）<textarea id="importantMemories-input" rows="2"></textarea></label>
+        <label>角色卡 JSON<textarea id="card-json" rows="5" spellcheck="false" maxlength="65536" placeholder="schema: ai-dungeon-character / version: 1"></textarea></label>
+        <div class="dialog-actions"><button id="import-card" type="button" class="secondary">校验并导入设定</button><button id="export-editor" type="button" class="secondary">导出编辑设定</button></div>
+        <p id="card-notice" role="status" class="hint">导入只填写创建表单，点击创建后才开始新冒险。</p>
+      </details><div class="dialog-actions"><button class="secondary" type="button" data-close="create-dialog">暂不创建</button><button class="primary" type="submit">创建并开始冒险</button></div>
     </form>
   </dialog>
-  <dialog id="details-dialog" aria-labelledby="details-title"><div class="dialog-heading"><h2 id="details-title">角色详情</h2><button class="text-button" type="button" data-close="details-dialog">关闭 ×</button></div><div id="character-details"></div></dialog>
+  <dialog id="details-dialog" aria-labelledby="details-title"><div class="dialog-heading"><h2 id="details-title">角色详情</h2><button class="text-button" type="button" data-close="details-dialog">关闭 ×</button></div><div class="dialog-actions"><button id="edit-character" class="secondary" type="button">编辑设定并新建冒险</button><button id="export-character" class="secondary" type="button">导出当前角色卡</button></div><div id="character-details"></div></dialog>
   <dialog id="history-dialog" aria-labelledby="history-title"><div class="dialog-heading"><h2 id="history-title">冒险历史</h2><button class="text-button" type="button" data-close="history-dialog">关闭 ×</button></div><p id="history-summary" class="dialog-intro"></p><ol id="history-list"></ol><button id="history-more" class="secondary" type="button">查看更早记录</button></dialog>
 </body>
 </html>

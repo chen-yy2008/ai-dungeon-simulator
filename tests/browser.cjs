@@ -197,6 +197,41 @@ async function run() {
   await send('Page.reload'); await waitReady();
   await evaluate(`document.getElementById('create-dialog').close()`); await click('load');
   assert.deepEqual(await model(), savedWorld, '刷新后 localStorage 仍可恢复');
+  // 新模型只编辑新角色，不允许失败导入改变运行中的资源或计时器。
+  if (await evaluate('typeof CharacterCard !== "undefined"')) {
+    await click('new-adventure'); const beforeImport = await model();
+    const nameBefore = await evaluate("document.getElementById('name-input').value");
+    await evaluate("document.querySelector('.card-editor').open=true; document.getElementById('card-json').value='{bad}'; document.getElementById('import-card').click()");
+    assert.ok(await evaluate("document.getElementById('card-notice').textContent.includes('JSON 语法错误')"));
+    assert.equal(await evaluate("document.getElementById('name-input').value"), nameBefore);
+    assert.deepEqual(await model(), beforeImport); assert.equal(await jobs(), 0);
+    await evaluate(`const card=CharacterCard.fromConfig({name:'卡片旅人',classId:'mage'});card.identity='边境研究者';card.background='<img src=x onerror="window.pwned=true">';card.level=7;card.abilities.INT=20;card.values=['知识'];card.behavior.riskTolerance=20;card.weaknesses=['畏惧亡灵'];card.importantMemories=['故乡的旧石塔'];document.getElementById('card-json').value=JSON.stringify(card);document.getElementById('import-card').click()`);
+    assert.equal(await evaluate("document.getElementById('card-INT').value"), '20');
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:1,mobile:false});
+    assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
+    await evaluate("document.getElementById('identity-input').scrollIntoView()");
+    await screenshot('card-editor-v06.png');
+    await send('Emulation.setDeviceMetricsOverride', {width:1240,height:1420,deviceScaleFactor:1,mobile:false});
+    await screenshot('card-editor-desktop-v06.png');
+    await evaluate("document.getElementById('create-form').requestSubmit()");
+    const cardState = await model(); assert.equal(cardState.character.name,'卡片旅人');
+    assert.equal(cardState.character.level,7); assert.equal(cardState.character.abilities.INT,20);
+    assert.equal(cardState.character.maxHp,22); assert.equal(await jobs(),1);
+    await click('details'); assert.equal(await evaluate('window.pwned'),undefined);
+    assert.ok(await evaluate("document.getElementById('character-details').textContent.includes('<img')"));
+    const downloadPath = path.join(output,'card-download'); fs.mkdirSync(downloadPath,{recursive:true});
+    const exportedPath=path.join(downloadPath,'ai-dungeon-character.json'); if(fs.existsSync(exportedPath))fs.unlinkSync(exportedPath);
+    await send('Page.setDownloadBehavior',{behavior:'allow',downloadPath}); await click('export-character');
+    for(let i=0;i<50&&!fs.existsSync(exportedPath);i++)await new Promise(resolve=>setTimeout(resolve,50));
+    assert.ok(fs.existsSync(exportedPath),'实际 JSON 下载应完成');
+    const exported=require('../character-card.js').parse(fs.readFileSync(exportedPath,'utf8'));
+    assert.equal(exported.name,'卡片旅人'); assert.equal(exported.gold,undefined);
+    await click('edit-character'); assert.equal(await jobs(),0);
+    assert.equal(await evaluate("document.getElementById('name-input').value"),'卡片旅人');
+    await evaluate("document.getElementById('create-dialog').close()");
+    await loadSnapshot(savedWorld);
+    console.log('v0.6 浏览器角色卡通过：失败导入保持冒险、合法导入、可编辑六维、纯文本显示、实际 JSON 下载、新建编辑与窄屏。');
+  }
   // 再打开没有虚拟时钟的页面，检查真实播放与暂停。
   await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
   await send('Page.navigate', { url: 'about:blank' }); await send('Page.navigate', { url: fileUrl }); await waitReady();

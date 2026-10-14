@@ -1,4 +1,4 @@
-# Ready-to-activate template. Copy to .github/workflows/pages.yml only after workflow authorization.
+# Only formal tags or explicit existing-tag redeployment; ordinary main pushes do not deploy.
 name: Deploy formal version to Pages
 on:
   push:
@@ -16,6 +16,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
+    permissions:
+      contents: read
+      pages: read
     runs-on: ubuntu-latest
     env:
       DEPLOY_TAG: ${{ inputs.tag || github.ref_name }}
@@ -40,6 +43,7 @@ jobs:
           node scripts/check-release.cjs
           node tests/check.cjs
           node tests/world.cjs
+          node tests/browser.cjs
           for f in tests/ui.cjs tests/pages.cjs tests/living-world.cjs tests/character.cjs; do
             if [ -f "$f" ]; then node "$f"; fi
           done

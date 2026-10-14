@@ -41,6 +41,9 @@ try {
   $artifact=Join-Path $working 'artifact'
   & node (Join-Path $root 'scripts\build-pages.cjs') --source $source --output $artifact
   if ($LASTEXITCODE -ne 0) {throw 'Pages artifact failed'}
+  $mode=& $gh api ('repos/'+$repo+'/pages') --jq '.build_type'
+  if ($LASTEXITCODE -ne 0) {throw 'Cannot inspect Pages mode'}
+  if ($mode -eq 'workflow') {throw 'Custom Actions Pages active. Use its tagged workflow; do not replace with branch deployment.'}
   $branch=Join-Path $working 'branch'; New-Item -ItemType Directory -Path $branch | Out-Null
   G $branch @('init','--initial-branch=gh-pages') | Out-Null
   G $branch @('remote','add','origin',$remote) | Out-Null

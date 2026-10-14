@@ -9,7 +9,7 @@ for (const classId of ['warrior', 'rogue', 'mage']) {
 }
 const sim = new Simulation({ seed: 'migration' });
 for (let i = 0; i < 180; i++) sim.step();
-const legacy = sim.toSave(); delete legacy.character.abilities; delete legacy.character.level;
+const legacy = sim.toSave(); delete legacy.character.abilities; delete legacy.character.level; delete legacy.character.profile;
 const restored = Simulation.fromSave(legacy);
 assert.deepEqual(restored.character.abilities, createCharacter().abilities);
 for (const key of ['hp', 'maxHp', 'ac', 'attackBonus', 'damageSides', 'damageBonus', 'position']) assert.deepEqual(restored.character[key], legacy.character[key]);

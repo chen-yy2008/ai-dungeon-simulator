@@ -3,6 +3,7 @@
   const D = typeof module !== 'undefined' && module.exports ? require('./core.js') : root.DungeonCore;
   const E = typeof module !== 'undefined' && module.exports ? require('./events.js') : root.AdventureEvents;
   const L = typeof module !== 'undefined' && module.exports ? require('./living-world.js') : root.LivingWorld;
+  const C = typeof module !== 'undefined' && module.exports ? require('./character-card.js') : root.CharacterCard;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const copy = value => JSON.parse(JSON.stringify(value));
   const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -30,16 +31,13 @@
   }
 
   function createCharacter(config = {}) {
-    const classId = CLASSES[config.classId] ? config.classId : 'warrior';
+    const profile = C.fromConfig(config), { classId, traits } = profile;
     const stats = CLASSES[classId];
-    const defaults = { courage: 60, caution: 55, greed: 45, kindness: 65, curiosity: 70 };
-    const traits = Object.fromEntries(Object.keys(TRAITS).map(key => [key,
-      Number.isFinite(Number(config.traits?.[key])) ? clamp(Math.round(Number(config.traits[key])), 0, 100) : defaults[key]]));
-    return { ...stats, name: String(config.name || '艾尔文').trim().slice(0, 24) || '艾尔文', classId,
-      abilities: characterAbilities(classId), level: 1,
-      traits, goal: GOALS[config.goal] ? config.goal : 'explore', hp: stats.maxHp,
+    return { ...stats, name: profile.name, classId, profile,
+      abilities: copy(profile.abilities), level: profile.level,
+      traits, goal: profile.goal, hp: stats.maxHp,
       gold: 24, potions: 2, fatigue: 0, kills: 0, moves: 0,
-      position: { ...TOWN, region: 'town' }, knowledge: ['town', 'forest'], memories: [],
+      position: { ...TOWN, region: 'town' }, knowledge: ['town', 'forest'], memories: profile.importantMemories.map((note, i) => ({ id: 'background-card-' + i, note: '角色背景：' + note, time: 480, count: 1 })),
       inventory: [{ id: 'weapon', name: stats.weapon, count: 1, value: 0 }],
       intent: '准备出发', reason: '先了解道路、整理物资，再离开安全的小镇。' };
   }
@@ -104,17 +102,19 @@
     threshold(character) {
       const t = character.traits;
       return clamp(.18 + t.caution * .0035 - t.courage * .001 - t.greed * .0004 +
-        (character.goal === 'survive' ? .12 : 0) + (character.memories.some(m => m.id === 'injured') ? .03 : 0), .15, .6);
+        (character.goal === 'survive' ? .12 : 0) + (50 - (character.profile?.behavior.riskTolerance ?? 50)) * .001 +
+        (character.profile?.weaknesses.includes('畏惧亡灵') && character.position.region === 'ruins' ? .06 : 0) +
+        (character.profile?.weaknesses.includes('冲动') ? -.02 : 0) + (character.memories.some(m => m.id === 'injured') ? .03 : 0), .15, .6);
     }
     decide(observation, random) {
       const c = observation.character, ratio = c.hp / c.maxHp, threshold = this.threshold(c);
-      const tired = c.fatigue >= 80 - c.traits.caution * .12 + c.traits.courage * .06;
+      const tired = c.fatigue >= 80 - c.traits.caution * .12 + c.traits.courage * .06 + (50 - (c.profile?.behavior.discipline ?? 50)) * .12 - (c.profile?.weaknesses.includes('体力不足') ? 8 : 0);
       const danger = ratio < threshold || tired;
       return this.choose([
         { action: 'potion', allowed: c.potions > 0 && ratio < .62, score: 60 + (1 - ratio) * 110 + c.traits.caution * .2,
           reason: `生命值仅剩 ${Math.round(ratio * 100)}%，使用已有药水比继续冒险更稳妥。` },
         { action: 'retreat', allowed: danger, score: 120 + Math.max(0, threshold - ratio) * 180 + c.fatigue * .3,
-          reason: `${ratio < threshold ? '生命值低于性格决定的风险阈值' : '疲劳过高'}，先返回小镇恢复。` },
+          reason: `${ratio < threshold ? '生命值低于性格与行为决定的风险阈值' : '疲劳过高'}，先返回小镇恢复。` },
         { action: 'continue', score: 40 + c.traits.courage * .2 + c.traits.greed * .1,
           reason: '生命值与物资尚可，继续朝当前目标行动。' }
       ], random);
@@ -124,10 +124,16 @@
         const traitScore = Object.entries(action.traits).reduce((sum, [trait, weight]) => sum + character.traits[trait] / 100 * weight, 0);
         const risk = (action.risk || 0) * (character.traits.caution * .3 + (1 - character.hp / character.maxHp) * 75 +
           (character.memories.some(m => ['injured', 'cursedChest', 'badElixir'].includes(m.id)) ? 12 : 0));
+        const altruism = ((character.profile?.behavior.altruism ?? 50) - 50) * .7 + (character.profile?.values.includes('同情') ? 20 : 0);
+        const valueScore = (action.traits.kindness || 0) * altruism / 100 +
+          (character.profile?.values.some(v => ['知识', '探索'].includes(v)) ? (action.traits.curiosity || 0) * .2 : 0) +
+          (character.profile?.values.includes('财富') ? (action.traits.greed || 0) * .2 : 0) +
+          (character.profile?.values.includes('责任') && ['help', 'potion', 'guide', 'return'].includes(action.id) ? 8 : 0) +
+          (character.profile?.values.includes('自由') && ['leave', 'ignore', 'evade'].includes(action.id) ? 6 : 0);
         const bonus = action.check ? character.exploreBonus * 1.5 : 0;
-        return { action, score: action.base + traitScore + bonus - risk +
+        return { action, score: action.base + traitScore + valueScore + bonus - risk +
           (character.goal === 'wealth' ? (action.traits.greed || 0) * .25 : 0),
-          reason: `结合性格、${character.goal === 'wealth' ? '财富目标' : '当前目标'}、职业调查能力和当前风险，选择「${action.label}」。` };
+          reason: `结合性格、价值观、行为倾向、${character.goal === 'wealth' ? '财富目标' : '当前目标'}、职业调查能力和当前风险，选择「${action.label}」。` };
       }), random);
     }
   }
@@ -458,6 +464,7 @@
       // v0.3 additive migration: retain combat statistics, RNG and world facts.
       sim.character.abilities = sim.character.abilities || characterAbilities(sim.character.classId);
       sim.character.level = sim.character.level || 1;
+      sim.character.profile = sim.character.profile || C.fromConfig(sim.character);
       for (const key of ['phase', 'status', 'actions', 'mission', 'destination', 'pending', 'lastRest']) sim[key] = save[key];
       const restoreCombat = data => {
         if (!data) return null;
@@ -484,7 +491,10 @@
     const c = save.character, w = save.world;
     if (!L.validate(w)) fail();
     if (c.abilities && !ABILITIES.every(key => Number.isInteger(c.abilities[key]) && number(c.abilities[key], 3, 20))) fail();
-    if (c.level !== undefined && c.level !== 1) fail();
+    if (c.level !== undefined && (!Number.isInteger(c.level) || !number(c.level, 1, 20))) fail();
+    if (c.profile) {
+      try { const p = C.normalize(c.profile); if (p.name !== c.name || p.classId !== c.classId || p.level !== c.level || JSON.stringify(p.abilities) !== JSON.stringify(c.abilities)) fail(); } catch { fail(); }
+    }
     if (!CLASSES[c.classId] || typeof c.name !== 'string' || c.name.length > 24 || !GOALS[c.goal] || !number(c.maxHp, 1, 100) || !number(c.hp, 0, c.maxHp) ||
       !number(c.gold, 0) || !Number.isInteger(c.gold) || !number(c.potions, 0, 9) || !Number.isInteger(c.potions) || !number(c.fatigue, 0, 100) ||
       !number(c.ac, 1, 30) || !number(c.attackBonus, 0, 20) || !number(c.damageSides, 1, 20) || !number(c.damageBonus, 0, 20) ||

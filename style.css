@@ -163,3 +163,12 @@ button { transition: filter .15s; } button:hover { filter: brightness(1.1); } bu
 .panel, .map-panel, .world-clock, .dialog-intro { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 1000px) { .chronicle-layout { grid-template-columns: 1fr; }.header h1 { font-size: 28px; } }
 @media (max-width: 560px) { .app { padding: 18px 12px; }.header-seal { margin-left: 8px; padding-left: 8px; letter-spacing: 0; }.toolbar button, .toolbar select { padding: 8px 10px; }.map-footer { gap: 8px; flex-wrap: wrap; }.header h1 { letter-spacing: 1px; } }
+
+.card-editor { margin: 18px 0; border: 1px solid #68553b; padding: 12px; }
+.card-editor summary { cursor: pointer; color: #d5bb83; }
+.card-editor label { display: grid; gap: 5px; margin: 10px 0; }
+textarea { width: 100%; resize: vertical; background: #151b20; color: #eee0bc; border: 1px solid #68553b; padding: 9px; font: inherit; }
+#card-json { font-family: monospace; }
+
+.card-editor input { width: 100%; border: 1px solid #434b4d; border-radius: 5px; background: #10171c; color: var(--text); padding: 10px; font: inherit; }
+textarea:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

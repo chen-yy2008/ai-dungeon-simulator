@@ -64,7 +64,8 @@
   }
   function offer(sim, q) {
     const c = sim.character, state = sim.world.quests[q.id], npc = sim.world.npcs[q.giver];
-    const score = 20 + Object.entries(q.traits).reduce((sum, [key, weight]) => sum + c.traits[key] * weight, 0) + npc.relationship * .15;
+    const score = 20 + Object.entries(q.traits).reduce((sum, [key, weight]) => sum + c.traits[key] * weight, 0) + npc.relationship * .15 + ((c.profile?.behavior.altruism ?? 50) - 50) * (q.traits.kindness || 0) +
+      (c.profile?.values.includes('责任') ? 8 : 0) - (c.profile?.weaknesses.includes('不善交际') ? 8 : 0);
     const chosen = sim.agent.choose([
       { action: 'accept', score: score + (c.goal === 'wealth' && q.reward ? 12 : 0), allowed: q.id !== 'research' || c.potions > 0 },
       { action: 'decline', score: 20 + c.traits.caution * .3 + (c.hp / c.maxHp < .5 ? 30 : 0) }

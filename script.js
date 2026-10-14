@@ -5,6 +5,7 @@
   const A = globalThis.Adventure;
   const $ = id => document.getElementById(id);
   const text = (id, value) => { $(id).textContent = value; };
+  const cards = globalThis.CharacterCard, editor = new globalThis.CardEditor(cards, $);
   const STORAGE_KEY = 'ai-dungeon-simulator:v0.3';
   const delays = { slow: 700, normal: 250, fast: 60 };
   const regionNames = { town: '边境小镇', forest: '北部森林', ruins: '古代遗迹' };
@@ -39,7 +40,7 @@
     const c = sim.character, battle = sim.combat?.battle;
     text('clock', timestamp(sim.world.minutes)); text('seed-label', `种子 ${sim.config.seed}`);
     text('character-name', c.name); text('class-label', `${A.CLASSES[c.classId].name} · ${regionNames[c.position.region]}`);
-    text('level-label', `原型等级 ${c.level} · 暂无升级`);
+    text('level-label', `设定等级 ${c.level} · 无经验成长`);
     $('ability-scores').replaceChildren(...A.ABILITIES.map(key => {
       const item = document.createElement('div'), label = document.createElement('span'), value = document.createElement('strong');
       label.textContent = key; value.textContent = c.abilities[key]; item.append(label, value); return item;
@@ -133,20 +134,24 @@
     const c = A.CLASSES[$('class-input').value];
     text('class-description', `${c.name}：HP ${c.maxHp} · AC ${c.ac} · 攻击 +${c.attackBonus} · 1d${c.damageSides}+${c.damageBonus} · 调查 +${c.exploreBonus} · 脱离 +${c.escapeBonus}。法师仅使用普通攻击，本版没有法术系统。`);
   }
-  $('class-input').addEventListener('change', classDescription);
+  $('class-input').addEventListener('change', () => { classDescription(); editor.defaults($('class-input').value); });
+  $('class-input').addEventListener('card-import', classDescription);
   Object.keys(A.TRAITS).forEach(key => $(key).addEventListener('input', () => text(`${key}-value`, $(key).value)));
   $('create-form').addEventListener('submit', event => {
     event.preventDefault();
-    const config = { name: $('name-input').value, classId: $('class-input').value, goal: $('goal-input').value,
-      seed: $('seed-input').value.trim() || freshSeed(), traits: Object.fromEntries(Object.keys(A.TRAITS).map(key => [key, Number($(key).value)])) };
-    replaceSimulation(new A.Simulation(config), true); $('create-dialog').close();
+    try {
+      const config = { card: editor.read(), seed: $('seed-input').value.trim() || freshSeed() };
+      replaceSimulation(new A.Simulation(config), true); $('create-dialog').close();
+    } catch (error) { text('card-notice', error.message); document.querySelector('.card-editor').open = true; return; }
     notify('角色已创建，AI 已接管行动。相同种子和角色配置会产生相同逻辑结果。');
   });
   document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => $(button.dataset.close).close()));
   $('details').addEventListener('click', () => {
     const c = sim.character, rows = [
-      ['角色', `${c.name} · ${A.CLASSES[c.classId].name}`], ['长期目标', A.GOALS[c.goal]], ['位置', `${regionNames[c.position.region]} (${c.position.x}, ${c.position.y})`],
-      ['六维与等级', `${A.ABILITIES.map(key => key + ' ' + c.abilities[key]).join(' / ')} · 原型等级 ${c.level}（暂无成长系统，不影响既有战斗数值）`],
+      ['角色', `${c.name} · ${A.CLASSES[c.classId].name}`], ['长期目标', A.GOALS[c.goal]], ['身份与背景', c.profile.identity + ' / ' + c.profile.background],
+      ['价值观与行为', c.profile.values.join('、') + ' / 冒险意愿 ' + c.profile.behavior.riskTolerance + '，助人 ' + c.profile.behavior.altruism + '，自律 ' + c.profile.behavior.discipline],
+      ['设定愿望', c.profile.shortGoal + ' / ' + c.profile.longGoal], ['描述能力与弱点', c.profile.basicAbilities.join('、') + ' / ' + c.profile.weaknesses.join('、')], ['位置', `${regionNames[c.position.region]} (${c.position.x}, ${c.position.y})`],
+      ['六维与等级', `${A.ABILITIES.map(key => key + ' ' + c.abilities[key]).join(' / ')} · 设定等级 ${c.level}（暂无成长系统，不影响既有战斗数值）`],
       ['能力', `HP ${c.hp}/${c.maxHp}，AC ${c.ac}，攻击 +${c.attackBonus}，伤害 1d${c.damageSides}+${c.damageBonus}，调查 +${c.exploreBonus}，脱离 +${c.escapeBonus}`],
       ['性格', Object.entries(c.traits).map(([key, value]) => `${A.TRAITS[key]} ${value}`).join(' / ')],
       ['物资', `${c.gold} 金币，${c.potions} 瓶药水，疲劳 ${c.fatigue.toFixed(1)}`], ['背包', c.inventory.map(i => `${i.name}×${i.count}`).join('、')],
@@ -156,6 +161,12 @@
       const p = document.createElement('p'), strong = document.createElement('strong'); strong.textContent = label; p.append(strong, document.createTextNode(value)); return p;
     })); $('details-dialog').showModal();
   });
+  $('edit-character').addEventListener('click', () => {
+    running = false; cancelTimer(); render(); editor.fill(cards.exportCharacter(sim.character)); classDescription();
+    $('seed-input').value = freshSeed(); $('details-dialog').close(); $('create-dialog').showModal();
+    notify('正在编辑新冒险的设定；确认创建前，原冒险保持暂停。');
+  });
+  $('export-character').addEventListener('click', () => editor.download(cards.exportCharacter(sim.character)));
   function moreHistory() {
     const history = historySnapshot, end = history.length - historyShown, start = Math.max(0, end - 40);
     $('history-list').append(...history.slice(start, end).reverse().map(r => entry(r)));
@@ -172,5 +183,5 @@
     $('card-collapse').setAttribute('aria-expanded', String(!compact)); text('card-collapse', compact ? '展开属性' : '折叠属性');
   });
   window.addEventListener('pagehide', () => { if (started && storageAvailable) save(false); });
-  $('seed-input').value = sim.config.seed; classDescription(); render(true); $('create-dialog').showModal();
+  $('seed-input').value = sim.config.seed; classDescription(); editor.defaults(sim.character.classId); render(true); $('create-dialog').showModal();
 })();
