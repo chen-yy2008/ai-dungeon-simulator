@@ -6,6 +6,7 @@
   const $ = id => document.getElementById(id);
   const text = (id, value) => { $(id).textContent = value; };
   const cards = globalThis.CharacterCard, editor = new globalThis.CardEditor(cards, $);
+  let renderedAbilities = '', renderedClass = '';
   const STORAGE_KEY = 'ai-dungeon-simulator:v0.3';
   const delays = { slow: 700, normal: 250, fast: 60 };
   const regionNames = { town: '边境小镇', forest: '北部森林', ruins: '古代遗迹' };
@@ -41,10 +42,14 @@
     text('clock', timestamp(sim.world.minutes)); text('seed-label', `种子 ${sim.config.seed}`);
     text('character-name', c.name); text('class-label', `${A.CLASSES[c.classId].name} · ${regionNames[c.position.region]}`);
     text('level-label', `设定等级 ${c.level} · 无经验成长`);
-    $('ability-scores').replaceChildren(...A.ABILITIES.map(key => {
+    text('card-ac', c.ac); text('card-goal', A.GOALS[c.goal]); text('card-gear', c.inventory.find(i => i.id === 'weapon')?.name || '无初始武器');
+    if (renderedClass !== c.classId) { $('portrait').src = 'assets/' + globalThis.PixelAssets.heroes[c.classId] + '-portrait.png'; $('portrait').alt = A.CLASSES[c.classId].name + '原型像素头像'; renderedClass = c.classId; }
+    const abilitiesKey = JSON.stringify(c.abilities);
+    if (renderedAbilities !== abilitiesKey) { renderedAbilities = abilitiesKey; $('ability-scores').replaceChildren(...A.ABILITIES.map(key => {
       const item = document.createElement('div'), label = document.createElement('span'), value = document.createElement('strong');
-      label.textContent = key; value.textContent = c.abilities[key]; item.append(label, value); return item;
-    }));
+      const modifier = document.createElement('small'), n = Math.floor((c.abilities[key] - 10) / 2);
+      label.textContent = key; value.textContent = c.abilities[key]; modifier.textContent = (n >= 0 ? '+' : '') + n; item.append(label, value, modifier); return item;
+    })); }
     text('trait-summary', Object.entries(c.traits).map(([key, value]) => `${A.TRAITS[key]} ${value}`).join(' · '));
     health('hp', 'hp-bar', c.hp, c.maxHp); health('fatigue', 'fatigue-bar', Math.round(c.fatigue), 100);
     text('gold', c.gold); text('potions', c.potions); text('kills', c.kills);
@@ -52,6 +57,7 @@
     text('goal', `长期目标：${A.GOALS[c.goal]}`); text('intent', c.intent); text('reason', c.reason);
     text('map-title', sim.phase === 'dungeon' ? '古代遗迹 · 局部地牢' : '艾尔文边境 · 世界地图');
     text('map-caption', sim.phase === 'dungeon' ? '仅观察自身与四邻格 · 保留已知退路' : '边境小镇 → 北部森林 → 古代遗迹');
+    $('map-zoom').hidden = sim.phase !== 'dungeon'; text('map-zoom', view.overview ? '跟随冒险者' : '查看遗迹全图');
     text('position', `${regionNames[c.position.region]} (${c.position.x}, ${c.position.y})`);
     text('moves', `移动 ${c.moves} 步`); text('actions', `逻辑行动 ${sim.actions} 次`);
     text('progress', sim.dungeon ? `遗迹探索 ${(sim.dungeon.explorer.visited.size / sim.dungeon.floorCount * 100).toFixed(1)}%` : '遗迹尚未进入');
@@ -86,7 +92,7 @@
       const li = document.createElement('li'); li.textContent = `${q.title} · ${stages[sim.world.quests[q.id].stage]}`; return li;
     }));
     if (renderedPhase !== sim.phase) { $('dungeon').className = sim.phase === 'dungeon' ? 'dungeon-transition' : 'world-transition'; renderedPhase = sim.phase; }
-    view.draw(sim); renderLogs(force);
+    view.draw(sim, running); renderLogs(force);
   }
   function cancelTimer() { if (timer !== null) clearTimeout(timer); timer = null; }
   function schedule() { cancelTimer(); if (running && sim.status !== 'dead') timer = setTimeout(tick, delays[$('speed').value]); }
@@ -112,6 +118,7 @@
     running = !running; started = true;
     if (!running) { cancelTimer(); save(false); } else schedule(); render();
   });
+  $('map-zoom').addEventListener('click', () => { view.overview = !view.overview; render(); });
   $('speed').addEventListener('change', schedule);
   $('regenerate').addEventListener('click', () => {
     replaceSimulation(new A.Simulation({ ...sim.config, seed: freshSeed() }));
@@ -182,6 +189,17 @@
     const compact = document.querySelector('.character-panel').classList.toggle('compact');
     $('card-collapse').setAttribute('aria-expanded', String(!compact)); text('card-collapse', compact ? '展开属性' : '折叠属性');
   });
+  const mobileMedia = matchMedia('(max-width: 780px)');
+  const adaptControls = () => { $('toolbar-more').open = !mobileMedia.matches; };
+  adaptControls(); mobileMedia.addEventListener('change', adaptControls);
+  document.body.dataset.mobilePanel = 'map';
+  document.querySelectorAll('[data-mobile-view]').forEach(button => button.addEventListener('click', () => {
+    document.body.dataset.mobilePanel = button.dataset.mobileView;
+    document.querySelectorAll('[data-mobile-view]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+    if (button.dataset.mobileView === 'story') $('chronicle').open = true;
+  }));
+  const assetStatus = () => { const p = globalThis.PixelAssets; text('asset-status', p.status === 'ready' ? '本地 CC0 像素图集已就绪' : '部分图集加载失败，已使用简化后备画面。可重新打开页面重试。'); $('asset-status').classList.toggle('asset-warning', p.status !== 'ready'); render(); };
+  globalThis.PixelAssets.ready.then(assetStatus);
   window.addEventListener('pagehide', () => { if (started && storageAvailable) save(false); });
   $('seed-input').value = sim.config.seed; classDescription(); editor.defaults(sim.character.classId); render(true); $('create-dialog').showModal();
 })();

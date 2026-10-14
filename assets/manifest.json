@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "acquired": "2026-10-14",
+  "sources": [
+    {
+      "file": "assets/field.png",
+      "source": "Ninja Adventure - Asset Pack/Backgrounds/Tilesets/TilesetField.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "a519353dfdb4dfe8d2a1c67061be063056bbf0275eafa87ff711614e278c7261"
+    },
+    {
+      "file": "assets/nature.png",
+      "source": "Ninja Adventure - Asset Pack/Backgrounds/Tilesets/TilesetNature.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "51eedd957ad4ac88988d170aa83a42404ef8fdebff9e6753b6fe80841ab3d5bb"
+    },
+    {
+      "file": "assets/town.png",
+      "source": "Ninja Adventure - Asset Pack/Backgrounds/Tilesets/TilesetHouse.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "acdec09ff389883a48af18ebd344cac4081db0388154d4d13be0089cd376d508"
+    },
+    {
+      "file": "assets/stone-floor.png",
+      "source": "Ninja Adventure - Asset Pack/Backgrounds/Tilesets/Interior/TilesetInteriorFloor.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "e281598e2d90f43b31fd557b94c2d2abb00d307758a053b7df301575bf535e3a"
+    },
+    {
+      "file": "assets/stone-wall.png",
+      "source": "Ninja Adventure - Asset Pack/Backgrounds/Tilesets/Interior/TilesetWallSimple.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "ad5eb80ab4d5e65dbcda9dc012f9981323b277717349cdab012fc65ce06e43b2"
+    },
+    {
+      "file": "assets/props.png",
+      "source": "Ninja Adventure - Asset Pack/Backgrounds/Tilesets/TilesetElement.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "63d64985697d77033372256b9304ea85db7061f0fc19aafd0714492a9b57140e"
+    },
+    {
+      "file": "assets/coin.png",
+      "source": "Ninja Adventure - Asset Pack/Items/Object/MoneyBag.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "c2fb1458fbb5fc342f07882b7e8b7a9e061228d7fc7dcce82e6fadbb7acaf2ce"
+    },
+    {
+      "file": "assets/potion.png",
+      "source": "Ninja Adventure - Asset Pack/Items/Potion/LifePot.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "45dddffc0c603beb7833d54f817e706d570606484b6c91309a4d6a1d4fc6fa36"
+    },
+    {
+      "file": "assets/book.png",
+      "source": "Ninja Adventure - Asset Pack/Items/Object/Book.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "28b0cf86c3281cd7e3efa216c0dd7e342960ee4f1cc1e88e58333686ee68dc35"
+    },
+    {
+      "file": "assets/bag.png",
+      "source": "Ninja Adventure - Asset Pack/Items/Object/Bag.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "34a64adc24e119a9e64b4b2d839bff712ab3b635fedea7db2d17ff2593957dd9"
+    },
+    {
+      "file": "assets/dice.png",
+      "source": "Ninja Adventure - Asset Pack/Items/Object/Dice 20.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "d67dc5e08fc9d52f8408ee4488c0c6bbf4587d473fcc867292abcc4af55037f7"
+    },
+    {
+      "file": "assets/knight.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Knight/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "d20eacc1334abe43bd69c9298f55e383b86a1e71c726973240eb2bb0c4f5f08c"
+    },
+    {
+      "file": "assets/hunter.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Hunter/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "26af2137e450276687d308706519d6a57799e4a666d1a966076b1837c2032d81"
+    },
+    {
+      "file": "assets/sorcererblack.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/SorcererBlack/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "d0c3237c57382108812902f5114cdbeaadf09ff6db07e8d1b409d400daf8060c"
+    },
+    {
+      "file": "assets/skeleton.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Skeleton/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "c3a318d3e669bc197df47558dc3a3e5c21da8ccf0984096c0a096eb763966e74"
+    },
+    {
+      "file": "assets/villager.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Villager/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "74f05629f3214b095abe8ce13d745235a39603caabd9978815db7cbedab3a3fe"
+    },
+    {
+      "file": "assets/noble.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Noble/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "44ed23ecd5d7e7fa324e38e28252369f2167943ec26a490f9a2f5787cc8cbab0"
+    },
+    {
+      "file": "assets/woman.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Woman/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "223c09c46ea77d50c3c2cdaaa1d285836d679f5faedb742b5081a1d2b5f8f4d0"
+    },
+    {
+      "file": "assets/knight-portrait.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Knight/Faceset.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "dc1f6d3d6eb9c5f6f03afb635304e3b7438d1fb0e9c337f03767298882a5e338"
+    },
+    {
+      "file": "assets/hunter-portrait.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Hunter/Faceset.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "c961b7d3aa9250616d6b648ff3ac702e93362e80058454fb049c91ed1f3f8555"
+    },
+    {
+      "file": "assets/sorcererblack-portrait.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/SorcererBlack/Faceset.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "fab551cae1063afc0281fa6376121ce2eda24dc6c9d1b3c4d8b2341c89bb69d5"
+    },
+    {
+      "file": "assets/card-frame.png",
+      "source": "PNG/Double/Transparent center/panel-transparent-center-013.png",
+      "author": "Kenney",
+      "url": "https://kenney.nl/assets/fantasy-ui-borders",
+      "license": "CC0-1.0",
+      "modified": "保留 alpha，RGB 改为 99/64/41，九宫格裁片由 CSS 完成",
+      "sha256": "c715cb456161364925fc1802b592cb61c9d8e95d365ec2757818c559f743b50f"
+    }
+  ]
+}

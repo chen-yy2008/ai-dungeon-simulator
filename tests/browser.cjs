@@ -5,6 +5,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { spawn } = require('node:child_process');
+const server=require('node:http').createServer((req,res)=>{
+  const file=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\//,'')||'index.html';
+  if(file==='favicon.ico'){res.writeHead(204);res.end();return;}
+  if(!/^(?:[a-z0-9_-]+\.(?:html|js|css)|assets\/(?:[a-z0-9-]+\.png|licenses\/[a-z0-9-]+\.txt))$/.test(file)){res.writeHead(404);res.end();return;}
+  const absolute=path.resolve(__dirname,'..',file);if(!fs.existsSync(absolute)){res.writeHead(404);res.end();return;}
+  res.setHeader('Content-Type',file.endsWith('.png')?'image/png':file.endsWith('.js')?'text/javascript; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8');res.end(fs.readFileSync(absolute));
+});
 
 const executable = process.env.BROWSER_PATH || [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -76,7 +83,8 @@ async function run() {
     window.setTimeout = (fn, delay) => { const id = ++testClock.next; testClock.jobs.set(id, { fn, delay }); return id; };
     window.clearTimeout = id => testClock.jobs.delete(id);
   ` });
-  const fileUrl = process.env.BROWSER_URL || pathToFileURL(path.resolve(__dirname, '../index.html')).href;
+  if(!process.env.BROWSER_URL&&process.env.BROWSER_FILE!=='1')await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const fileUrl = process.env.BROWSER_URL || (server.listening ? 'http://127.0.0.1:'+server.address().port+'/' : pathToFileURL(path.resolve(__dirname, '../index.html')).href);
   const waitReady = async () => {
     for (let i = 0; i < 100; i++) {
       if (await evaluate(`document.getElementById('create-dialog')?.open === true`)) return;
@@ -97,21 +105,56 @@ async function run() {
     await evaluate(`localStorage.setItem('ai-dungeon-simulator:v0.3', ${JSON.stringify(JSON.stringify(snapshot))})`);
     await click('load');
   };
-  const screenshot = async filename => {
+  const screenshot = async (filename, selector) => {
     await new Promise(resolve => setTimeout(resolve, 400));
-    const result = await send('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync(path.join(output, filename), Buffer.from(result.data, 'base64'));
+    const clip = selector ? await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.x+scrollX,y:r.y+scrollY,width:r.width,height:r.height,scale:1}})()`) : undefined;
+    const result = await send('Page.captureScreenshot', { format: 'png', ...(clip ? {clip,captureBeyondViewport:true} : {}) });
+    const bytes = Buffer.from(result.data, 'base64');
+    fs.writeFileSync(path.join(output, filename), bytes);
+    const comparisons = { 'world-v03.png':'world', 'dungeon-v03.png':'dungeon', 'character.png':'character', 'narrow-v04.png':'mobile', 'dungeon-expanded.png':'dungeon-expanded' };
+    if (process.env.COMPARE_VERSION && comparisons[filename]) {
+      if (!/^v0[67]$/.test(process.env.COMPARE_VERSION)) throw new Error('Invalid comparison version');
+      const target = path.resolve(__dirname,'../docs/visual-comparison');fs.mkdirSync(target,{recursive:true});
+      fs.writeFileSync(path.join(target,process.env.COMPARE_VERSION+'-'+comparisons[filename]+'.png'),bytes);
+    }
   };
   await send('Page.navigate', { url: fileUrl }); await waitReady();
+  if(await evaluate('typeof PixelAssets!=="undefined"')) assert.equal(await evaluate('PixelAssets.ready'), 'ready', 'All real atlases must load');
+  if(await evaluate('typeof PixelAssets!=="undefined"')) {
+    const check=await evaluate(`(()=>{const sim=new Adventure.Simulation({seed:'visual-purity'});sim.enterDungeon();const before=JSON.stringify(sim.toSave());const canvas=document.createElement('canvas'),v=new MapView(canvas);v.draw(sim,false);let unknown=0;const ratio=devicePixelRatio;for(let y=v.camera.y;y<v.camera.y+13;y++)for(let x=v.camera.x;x<v.camera.x+13;x++)if(sim.dungeon.explorer.known[y][x]===-1){if(location.protocol!=='file:'){const pixels=canvas.getContext('2d').getImageData((x-v.camera.x)*32*ratio,(y-v.camera.y)*32*ratio,32*ratio,32*ratio).data;for(let i=0;i<pixels.length;i+=4)if(pixels[i]!==8||pixels[i+1]!==12||pixels[i+2]!==19||pixels[i+3]!==255)throw Error('Fog leak');}unknown++;}for(let i=0;i<30;i++)v.draw(sim,false);return {pure:before===JSON.stringify(sim.toSave()),unknown,smoothing:canvas.getContext('2d').imageSmoothingEnabled,loaded:PixelAssets.files.every(k=>PixelAssets.images[k].naturalWidth>0)};})()`);
+    assert.equal(check.pure,true);assert.ok(check.unknown>0);assert.equal(check.smoothing,false);assert.equal(check.loaded,true);
+  }
   await screenshot('creation-v03.png');
   await create();
   assert.equal(await evaluate(`document.querySelectorAll('#ability-scores strong').length`), 6);
   assert.equal(await evaluate(`document.querySelector('#ability-scores strong').textContent`), '16');
   await click('card-collapse'); assert.equal(await evaluate(`document.getElementById('card-collapse').getAttribute('aria-expanded')`), 'false');
   await click('card-collapse');
+  await screenshot('character.png', '.character-panel');
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Narrow layout must not overflow');
   await screenshot('narrow-v04.png');
+  if(await evaluate('typeof PixelAssets!=="undefined"')) {
+    for(const width of [360,390]) {
+      await send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:2,mobile:true});
+      await evaluate("document.querySelector('[data-mobile-view=map]').click()");
+      assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
+      assert.ok(await evaluate("document.querySelector('.map-panel').getBoundingClientRect().width>300"));
+      await evaluate("document.querySelector('[data-mobile-view=character]').click()");
+      assert.ok(await evaluate("getComputedStyle(document.querySelector('.sidebar')).display!=='none'"));
+      assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
+      await evaluate("document.querySelector('[data-mobile-view=story]').click()");
+      assert.equal(await evaluate("document.getElementById('chronicle').open"),true);
+      await evaluate("document.querySelector('[data-mobile-view=map]').click();document.getElementById('toolbar-more').open=true");
+      await click('toggle');assert.equal(await jobs(),0);await click('toggle');assert.equal(await jobs(),1);
+      assert.ok(await evaluate("document.querySelector('.mobile-nav button').getBoundingClientRect().height>=44"));
+      const dpr=await evaluate(`(()=>{const s=new Adventure.Simulation();const c=document.createElement('canvas');new MapView(c).draw(s,false);return {w:c.width,smoothing:c.getContext('2d').imageSmoothingEnabled}})()`);
+      assert.equal(dpr.w,1344);assert.equal(dpr.smoothing,false);
+    }
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
+    await evaluate("document.getElementById('toolbar-more').open=false");
+  }
+
   await send('Emulation.setDeviceMetricsOverride', { width: 1240, height: 1420, deviceScaleFactor: 1, mobile: false });
   assert.equal(await evaluate(`document.getElementById('create-dialog').open`), false);
   assert.equal(await jobs(), 1);
@@ -133,14 +176,20 @@ async function run() {
   await loadSnapshot(savedWorld);
   assert.equal(await jobs(), 0); assert.deepEqual(await model(), savedWorld, '本地读取应恢复角色、时间、历史和随机源');
   await click('toggle');
-  await evaluate(`for (let i = 0; i < 1500 && !(document.getElementById('event-heading').textContent === '自动战斗' && document.getElementById('combat-info').textContent.includes('骷髅')); i++) testClock.tick()`);
+  for (let batch=0; batch<30; batch++) {
+    const found=await evaluate(`(()=>{for(let i=0;i<50;i++){if(document.getElementById('event-heading').textContent==='自动战斗'&&document.getElementById('combat-info').textContent.includes('骷髅'))return true;testClock.tick();}return false})()`);
+    if(found)break;
+  }
   state = await model();
   assert.equal(state.phase, 'dungeon'); assert.ok(state.dungeon.encounters.battle);
   assert.ok(await evaluate(`document.getElementById('map-title').textContent.includes('局部地牢')`));
   assert.ok(state.dungeon.explorer.known.flat().includes(-1), '保留地牢迷雾');
   const battleMoves = state.character.moves;
   await screenshot('dungeon-v03.png');
+  if(await evaluate('typeof PixelAssets!=="undefined"')) console.log('v0.7 浏览器视觉检查通过：图集、绘图纯度、360/390px 触控、Retina、暂停；'+(fileUrl.startsWith('file:')?'file:// 已加载，像素读取由 HTTP 运行专项验证。':'HTTP 逐像素迷雾遮罩通过。'));
   await click('toggle'); const battleSave = await model();
+  const expanded=await evaluate(`(()=>{const s=Adventure.Simulation.fromSave(JSON.parse(localStorage.getItem('ai-dungeon-simulator:v0.3')));for(let i=0;i<3000;i++){if(s.phase==='dungeon'&&s.dungeon.explorer.visited.size>=40)return s.toSave();s.step();}throw Error('Cannot reach actual expanded dungeon');})()`);
+  await loadSnapshot(expanded);await screenshot('dungeon-expanded.png');await loadSnapshot(battleSave);
   assert.equal(await jobs(), 0); await speed('slow'); await tick(); assert.deepEqual(await model(), battleSave);
   await click('toggle'); assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), 700);
   await speed('fast'); assert.equal(await jobs(), 1); await tick();
@@ -148,7 +197,7 @@ async function run() {
   await loadSnapshot(battleSave); assert.deepEqual(await model(), battleSave);
   await click('toggle');
   // 保持浏览器页面实际渲染，执行一千五百次逻辑行动验证持续运行与区域返回。
-  await evaluate('for (let i = 0; i < 1500 && testClock.jobs.size; i++) testClock.tick()');
+  for(let batch=0;batch<30;batch++)await evaluate('for(let i=0;i<50&&testClock.jobs.size;i++)testClock.tick()');
   state = await model();
   assert.equal(state.status, 'alive'); assert.ok(state.world.ruinsCleared);
   assert.ok(state.character.kills >= 3);
@@ -232,6 +281,14 @@ async function run() {
     await loadSnapshot(savedWorld);
     console.log('v0.6 浏览器角色卡通过：失败导入保持冒险、合法导入、可编辑六维、纯文本显示、实际 JSON 下载、新建编辑与窄屏。');
   }
+  if(await evaluate('typeof PixelAssets!=="undefined"')) {
+    await send('Network.enable');await send('Network.setBlockedURLs',{urls:['*assets/field.png']});
+    await send('Page.reload');await waitReady();assert.equal(await evaluate('PixelAssets.ready'),'failed');
+    assert.ok(await evaluate("document.getElementById('asset-status').textContent.includes('后备')"));
+    await create();await tick();assert.equal((await model()).status,'alive');
+    await send('Network.setBlockedURLs',{urls:[]});await send('Page.reload');await waitReady();
+    assert.equal(await evaluate('PixelAssets.ready'),'ready');
+  }
   // 再打开没有虚拟时钟的页面，检查真实播放与暂停。
   await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
   await send('Page.navigate', { url: 'about:blank' }); await send('Page.navigate', { url: fileUrl }); await waitReady();
@@ -243,4 +300,4 @@ async function run() {
   assert.deepEqual(errors, [], '页面不得出现未捕获异常或模拟内部错误');
   console.log('v0.3 浏览器检查通过：角色创建、世界移动、进入/返回地牢、原有骷髅战斗、战斗暂停调速、1500 次持续行动、商人后续、详情与历史、存取与刷新恢复、重置、死亡停止、三职业、真实计时暂停。');
 }
-run().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => browser.kill());
+run().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { browser.kill(); if(server.listening)server.close(); });

@@ -2,8 +2,11 @@
 *.js text eol=lf
 *.cjs text eol=lf
 *.json text eol=lf
-*.md text eol=lf
+*.md text eol=lf whitespace=-blank-at-eol
 *.html text eol=lf
 *.css text eol=lf
 *.ps1 text eol=crlf
 *.png binary
+
+# Preserve Markdown hard line breaks and verbatim upstream license formatting.
+assets/licenses/*.txt text eol=lf whitespace=-blank-at-eol

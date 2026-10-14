@@ -1,150 +1,108 @@
-/* 只读取模拟状态并绘图，不掷骰、不改变世界。像素角色沿用 v0.2。 */
-(function (root) {
-  'use strict';
-  const sprites = {
-    hero: ['..............', '.....ggg......', '....gCCgg.....', '....CffCg..s..', '....CffC...s..', '....CCCC...s..', '..bbCCCCaa.s..', '..bSbaaaaf.s..', '..bSbSaSaaSs..', '..bbbSaSaa.g..', '....aaaaa.....', '....CaSaC.....', '....b...b.....', '..............'],
-    skeleton: ['..............', '.....bbbb.....', '....bffffb....', '....bfbbfb....', '....bffffb.r..', '.....fbf...r..', '......f....r..', '...fffbfff.r..', '..f..fff..fr..', '.....fbf..rr..', '.....fff......', '....f...f.....', '...ff...ff....', '..............']
-  };
-  class MapView {
-    constructor(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); }
-    rect(x, y, w, h, color) { this.ctx.fillStyle = color; this.ctx.fillRect(x, y, w, h); }
-    text(text, x, y, color = '#d6c6a7', size = 12) {
-      this.ctx.fillStyle = color; this.ctx.font = `${size}px system-ui, "Microsoft YaHei", sans-serif`; this.ctx.textAlign = 'center';
-      this.ctx.fillText(text, x, y);
-    }
-    sprite(p, type, cell, classId = 'warrior') {
-      const palette = { g: '#d7b36e', C: classId === 'mage' ? '#775591' : classId === 'rogue' ? '#35756c' : '#873f49',
-        f: '#ead9b6', a: '#637f8c', S: '#c4d0d0', s: '#eff0d5', b: '#1a202a', r: '#a07c68' };
-      const pixel = cell / 14;
-      this.rect(p.x * cell + 4, p.y * cell + cell - 5, cell - 8, 3, '#10141b');
-      sprites[type].forEach((row, y) => [...row].forEach((color, x) => {
-        if (color !== '.') this.rect(p.x * cell + x * pixel, p.y * cell + y * pixel, pixel, pixel, palette[color]);
-      }));
-    }
-    health(p, cell, actor, color) {
-      this.rect(p.x * cell + 3, p.y * cell + cell - 3, cell - 6, 2, '#171b22');
-      this.rect(p.x * cell + 3, p.y * cell + cell - 3, (cell - 6) * actor.hp / actor.maxHp, 2, color);
-    }
-    tree(x, y, cell, hash) {
-      const px = x * cell, py = y * cell;
-      this.rect(px + cell * .47, py + cell * .55, 4, cell * .35, '#514236');
-      this.rect(px + cell * .2, py + cell * .4, cell * .65, cell * .28, hash % 2 ? '#20392f' : '#253d33');
-      this.rect(px + cell * .3, py + cell * .23, cell * .45, cell * .25, '#2e4c3c');
-      this.rect(px + cell * .42, py + cell * .12, cell * .2, cell * .24, '#3b5844');
-    }
-    town(p, cell) {
-      const x = p.x * cell, y = p.y * cell;
-      for (const [dx, dy] of [[-24, -14], [22, -12], [0, -33]]) {
-        this.rect(x + dx, y + dy, 28, 24, '#574f45'); this.rect(x + dx - 3, y + dy, 34, 8, '#935f4c');
-        this.rect(x + dx + 7, y + dy + 10, 6, 6, '#d5b571'); this.rect(x + dx + 18, y + dy + 14, 6, 10, '#232934');
-      }
-      this.text('边境小镇', x + cell / 2, y + cell + 19, '#e6c481', 14);
-      this.text('旅馆 · 商店 · 公共路图', x + cell / 2, y + cell + 37, '#a29c8e', 10);
-    }
-    world(sim) {
-      const A = root.Adventure, cell = this.canvas.width / 21;
-      for (let y = 0; y < 21; y++) for (let x = 0; x < 21; x++) {
-        const hash = (x * 7 + y * 11) % 17, px = x * cell, py = y * cell;
-        this.rect(px, py, cell, cell, hash % 2 ? '#182b27' : '#172725');
-        if (sim.world.roadMap[y][x]) {
-          this.rect(px + 1, py + 1, cell - 2, cell - 2, '#4a4438');
-          this.rect(px + 3, py + cell / 2, cell - 6, 2, '#655a45');
-          this.rect(px + cell / 2, py + 3, 2, cell - 6, '#3b3931');
-        } else if (hash % 3 !== 0) this.tree(x, y, cell, hash);
-        else { this.rect(px + 9, py + 12, 6, 3, '#2e3d33'); this.rect(px + 17, py + 22, 3, 3, '#52604b'); }
-      }
-      this.town(A.TOWN, cell);
-      if (sim.world.npcs) for (const [index, n] of Object.values(sim.world.npcs).entries()) {
-        if (!n.available) continue;
-        const p = n.location, offset = p.region === 'town' ? index * 8 - 14 : 0;
-        this.rect((p.x + .5) * cell + offset, p.y * cell - 7, 5, 7, ['#e5ca8b', '#94ae86', '#a1b8c8', '#b39bc5'][index]);
-      }
-      this.text('北 部 森 林', 230, 108, '#c1c9a9', 18);
-      this.text('公开道路 · 林间路口', 230, 130, '#91a38c', 11);
-      for (const site of A.SITES) {
-        const visited = sim.world.siteTimes[root.DungeonCore.keyOf(site.x, site.y)] !== undefined;
-        this.rect(site.x * cell + 11, site.y * cell + 11, 11, 11, visited ? '#98a076' : '#a57f50');
-        this.rect(site.x * cell + 14, site.y * cell + 14, 5, 5, '#29322b');
-      }
-      if (sim.character.knowledge.includes('ruins')) {
-        const x = A.RUINS.x * cell, y = A.RUINS.y * cell;
-        this.rect(x - 8, y - 24, cell + 16, cell + 27, '#20262c');
-        this.rect(x - 8, y - 24, 10, cell + 27, '#6b6b67'); this.rect(x + cell - 2, y - 24, 10, cell + 27, '#6b6b67');
-        this.rect(x + 2, y - 24, cell - 4, 9, '#84816f');
-        this.rect(x + 8, y - 13, cell - 16, cell + 9, '#080c12');
-        this.text(sim.world.ruinsCleared ? '古代遗迹 · 已探索' : '古代遗迹', x + cell / 2, y - 38, '#d2c19f', 13);
-      }
-      if (sim.destination) {
-        const p = sim.destination;
-        this.ctx.strokeStyle = '#d8b679'; this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(p.x * cell + 3, p.y * cell + 3, cell - 6, cell - 6);
-      }
-      this.actor(sim, cell);
-      if (sim.pending || sim.fieldCombat?.battle) this.text(sim.pending ? '?' : '⚔',
-        (sim.character.position.x + .5) * cell, sim.character.position.y * cell - 4, '#efca81', 18);
-    }
-    dungeon(sim) {
-      const d = sim.dungeon, cell = this.canvas.width / 25;
-      for (let y = 0; y < 25; y++) for (let x = 0; x < 25; x++) {
-        const tile = d.explorer.known[y][x], px = x * cell, py = y * cell;
-        if (tile === -1) continue;
-        if (tile === 0) {
-          this.rect(px + 1, py + 1, cell - 2, cell - 2, '#262932'); this.rect(px + 1, py + 1, cell - 2, 2, '#42434a');
-          this.rect(px + cell / 2, py + 4, 2, cell - 7, '#161b22'); this.rect(px + 1, py + cell - 3, cell - 2, 2, '#181e23');
-        } else {
-          const visited = d.explorer.visited.has(root.DungeonCore.keyOf(x, y));
-          this.rect(px + 1, py + 1, cell - 2, cell - 2, visited ? ((x + y) % 2 ? '#3d4245' : '#363c40') : '#272c33');
-          this.rect(px + 3, py + 3, cell - 6, 1, visited ? '#565958' : '#42464d');
-          this.rect(px + cell / 2, py + 5, 1, cell - 9, '#20272f');
-          if ((x * 7 + y * 11) % 9 === 0) { this.rect(px + 5, py + 17, 5, 2, '#232a30'); this.rect(px + 9, py + 19, 2, 4, '#232a30'); }
-        }
-      }
-      for (const chest of d.chests) if (chest.discovered && !chest.resolved) {
-        const x = chest.x * cell, y = chest.y * cell;
-        this.rect(x + 6, y + 9, 17, 13, '#966b44'); this.rect(x + 6, y + 9, 17, 3, '#c69b63');
-        this.rect(x + 13, y + 12, 3, 7, '#ecd08b');
-      }
-      for (const monster of d.encounters.monsters) if (monster.hp > 0 && d.encounters.discovered.has(monster.id)) {
-        this.sprite(monster, 'skeleton', cell); this.health(monster, cell, monster, '#b85457');
-        if (d.encounters.battle?.target === monster) {
-          this.ctx.strokeStyle = '#e07f65'; this.ctx.lineWidth = 2;
-          this.ctx.strokeRect(monster.x * cell + 1, monster.y * cell + 1, cell - 2, cell - 2);
-        }
-      }
-      this.rect(d.start.x * cell + 3, d.start.y * cell + 3, 7, 7, '#68a99a');
-      this.actor(sim, cell);
-    }
-    actor(sim, cell) {
-      const p = this.visualPosition || sim.character.position;
-      this.rect(p.x * cell + 1, p.y * cell + 1, cell - 2, cell - 2, '#d8b67918');
-      this.sprite(p, 'hero', cell, sim.character.classId); this.health(p, cell, sim.character, '#d8b679');
-    }
-    draw(sim) {
-      if (this.frame) cancelAnimationFrame(this.frame);
-      const previous = this.lastPosition, current = { ...sim.character.position, phase: sim.phase };
-      this.lastPosition = current; this.visualPosition = null;
-      const canAnimate = previous && previous.phase === current.phase && sim.status !== 'dead' &&
-        Math.abs(previous.x - current.x) + Math.abs(previous.y - current.y) === 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!canAnimate) { this.paint(sim); return; }
-      const start = performance.now();
-      const animate = now => {
-        const fraction = Math.min(1, (now - start) / 120);
-        this.visualPosition = { x: previous.x + (current.x - previous.x) * fraction, y: previous.y + (current.y - previous.y) * fraction };
-        this.paint(sim);
-        this.frame = fraction < 1 ? requestAnimationFrame(animate) : null;
-      };
-      animate(start);
-    }
-    paint(sim) {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.rect(0, 0, this.canvas.width, this.canvas.height, '#070a0d');
-      if (sim.phase === 'dungeon') this.dungeon(sim); else this.world(sim);
-      if (sim.status === 'dead') {
-        this.rect(0, 0, this.canvas.width, this.canvas.height, '#110e17b8');
-        this.text('冒险终结', this.canvas.width / 2, this.canvas.height / 2, '#e5ada1', 30);
-        this.text('新建角色，或重新生成世界', this.canvas.width / 2, this.canvas.height / 2 + 34, '#baa99c', 13);
-      }
-    }
+/* 图集视觉层：只读模拟状态，保留 legacy-view.js 作为加载失败后备。 */
+(function(root){
+'use strict';
+const P=root.PixelAssets;
+class MapView extends root.LegacyMapView {
+  constructor(canvas){super(canvas);this.direction=0;this.walkFrame=0;this.ready=P.ready;this.fallback=new root.LegacyMapView(canvas);P.ready.then(()=>{if(this.sim)this.paint(this.sim)});}
+  image(id,sx,sy,sw,sh,x,y,w,h,ctx=this.ctx){ctx.drawImage(P.images[id],sx,sy,sw,sh,Math.round(x),Math.round(y),w,h);}
+  tile(id,sx,sy,x,y,ctx=this.ctx){this.image(id,sx,sy,16,16,x*32,y*32,32,32,ctx);}
+  sprite(p,id,cell,direction=0,frame=0){
+    const px=Math.round(p.x*cell/2)*2,py=Math.round(p.y*cell/2)*2;
+    this.ctx.fillStyle='#13271b66';this.ctx.beginPath();this.ctx.ellipse(px+16,py+29,11,4,0,0,Math.PI*2);this.ctx.fill();
+    this.image(id,direction*16,frame*16,16,16,px,py-4,cell,cell);
   }
-  root.MapView = MapView;
-})(typeof globalThis !== 'undefined' ? globalThis : this);
+  label(text,x,y,accent='#eee0b3'){
+    this.ctx.font='12px system-ui, "Microsoft YaHei", sans-serif';const width=this.ctx.measureText(text).width+18;
+    this.rect(x-width/2,y-13,width,20,'#14201dde');this.text(text,x,y+1,accent,12);
+  }
+  background(sim){
+    if(this.backgroundMap===sim.world.roadMap)return this.backgroundCanvas;
+    const canvas=document.createElement('canvas');canvas.width=canvas.height=672;
+    const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;const map=sim.world.roadMap;
+    for(let y=0;y<21;y++)for(let x=0;x<21;x++){
+      this.tile('field',16,112,x,y,ctx);
+      if(map[y][x])for(const q of P.roadQuarters(map,x,y))this.image('field',q.sx,q.sy,8,8,x*32+q.qx*16,y*32+q.qy*16,16,16,ctx);
+      else if(P.hash(x,y)%7===0)this.image('nature',64+P.hash(x,y)%3*16,160,16,16,x*32,y*32,32,32,ctx);
+    }
+    // 装饰占地必须为原地图非道路，缓存不会修改碰撞数据。
+    const free=(x,y,w,h)=>Array.from({length:h},(_,dy)=>Array.from({length:w},(_,dx)=>x+dx>=0&&x+dx<21&&y+dy>=0&&y+dy<21&&!map[y+dy][x+dx]).every(Boolean)).every(Boolean);
+    for(let y=0;y<20;y+=3)for(let x=0;x<20;x+=3){
+      const evergreen=P.hash(x,y)%3===0;if(x<9&&y>10||!free(x,y,evergreen?4:3,3))continue;
+      this.image('nature',evergreen?0:64,32,evergreen?64:48,48,x*32,y*32,evergreen?128:96,96,ctx);
+    }
+    if(free(0,11,4,5))this.image('town',400,224,64,80,0,11*32,128,160,ctx);
+    if(free(5,17,4,4))this.image('town',400,144,64,64,5*32,17*32,128,128,ctx);
+    for(let x=3;x<9;x++)if(map[16][x])this.tile('stone-floor',208,208,x,16,ctx);
+    const toned=document.createElement('canvas');toned.width=toned.height=672;const tone=toned.getContext('2d');tone.imageSmoothingEnabled=false;tone.filter='saturate(.82) brightness(.86)';tone.drawImage(canvas,0,0);this.backgroundMap=map;this.backgroundCanvas=toned;return toned;
+  }
+  world(sim){
+    const A=root.Adventure,cell=32;this.ctx.drawImage(this.background(sim),0,0);
+    for(const site of A.SITES){
+      this.image('book',0,0,16,16,site.x*cell+4,site.y*cell+4,24,24);
+      this.text('◆',(site.x+.5)*cell,site.y*cell-3,sim.world.siteTimes[root.DungeonCore.keyOf(site.x,site.y)]===undefined?'#ffe3a0':'#acbd90',10);
+    }
+    this.label('边境小镇 · 旅馆 / 市集',147,655);this.label('北部森林',323,53,'#e2efd2');
+    if(sim.character.knowledge.includes('ruins')){this.image('town',48,128,48,48,16*cell,2*cell,96,96);this.label(sim.world.ruinsCleared?'古代遗迹 · 已探索':'古代遗迹',17.5*cell,59);}
+    if(sim.destination){const p=sim.destination;this.ctx.strokeStyle='#fff0b0';this.ctx.lineWidth=2;this.ctx.strokeRect(p.x*cell+3,p.y*cell+3,cell-6,cell-6);}
+    const npcSprites={innkeeper:'woman',merchant:'noble',guild:'villager',mage:'sorcererblack'};
+    for(const [i,n]of Object.values(sim.world.npcs).entries()){
+      if(!n.available)continue;const p=n.location,offset=p.region==='town'?(i-1.5)*.42:0;
+      this.sprite({x:p.x+offset,y:p.y-.55},npcSprites[n.id]||'villager',cell);
+    }
+    this.actor(sim,cell);
+    if(sim.fieldCombat?.battle){const p=sim.character.position;this.sprite({x:p.x+.7,y:p.y},'hunter',cell,1);this.label('道路遭遇',(p.x+.5)*cell,p.y*cell-18,'#ffd2a0');}
+    else if(sim.pending)this.text('!',(sim.character.position.x+.5)*cell,sim.character.position.y*cell-9,'#fff1b3',21);
+  }
+  dungeon(sim){
+    const d=sim.dungeon,cell=32;
+    const cacheKey=d.explorer.known.map(r=>r.join('')).join('|')+':'+d.explorer.visited.size;
+    if(this.floorKey!==cacheKey){
+      const layer=document.createElement('canvas');layer.width=layer.height=800;
+      const previous=this.ctx;this.ctx=layer.getContext('2d');this.ctx.imageSmoothingEnabled=false;
+      this.rect(0,0,800,800,'#080c13');
+    for(let y=0;y<25;y++)for(let x=0;x<25;x++){
+      const tile=d.explorer.known[y][x];if(tile===-1)continue;
+
+      if(tile===0)this.tile('stone-wall',16,96,x,y);else this.tile('stone-floor',208+P.hash(x,y)%3*16,224,x,y);
+
+      if(tile===0){if(d.explorer.known[y+1]?.[x]===1)this.image('stone-wall',16,112,16,8,x*cell,y*cell+16,32,16);this.rect(x*cell,y*cell,cell,cell,'#080d1238');}
+      else if(!d.explorer.visited.has(root.DungeonCore.keyOf(x,y)))this.rect(x*cell,y*cell,cell,cell,'#080c1260');
+    }
+
+      this.ctx=previous;this.floorCanvas=layer;this.floorKey=cacheKey;
+    }
+    this.ctx.drawImage(this.floorCanvas,0,0);
+    for(const chest of d.chests)if(chest.discovered&&!chest.resolved&&d.explorer.known[chest.y][chest.x]!==-1)this.tile('props',48,16,chest.x,chest.y);
+    for(const monster of d.encounters.monsters)if(monster.hp>0&&d.encounters.discovered.has(monster.id)&&d.explorer.known[monster.y][monster.x]!==-1){
+      this.sprite(monster,'skeleton',cell);this.health(monster,cell,monster,'#dc7970');
+      if(d.encounters.battle?.target===monster){this.ctx.strokeStyle='#f6b977';this.ctx.lineWidth=2;this.ctx.strokeRect(monster.x*cell,monster.y*cell,cell,cell);}
+    }
+    if(d.explorer.known[d.start.y][d.start.x]!==-1)this.text('↙',(d.start.x+.5)*cell,(d.start.y+.7)*cell,'#a5e6c7',23);
+    this.actor(sim,cell);
+    // 最后覆盖未知格，角色/宝箱/装饰的边缘也不能泄露迷雾。
+    for(let y=0;y<25;y++)for(let x=0;x<25;x++)if(d.explorer.known[y][x]===-1)this.rect(x*32,y*32,32,32,'#080c13');
+  }
+  actor(sim,cell){this.sprite(this.visualPosition||sim.character.position,P.heroes[sim.character.classId],cell,this.direction,this.walkFrame);}
+  draw(sim,running=false){
+    this.sim=sim;if(this.frame)cancelAnimationFrame(this.frame);this.frame=null;
+    const previous=this.lastPosition,current={...sim.character.position,phase:sim.phase};this.lastPosition=current;this.visualPosition=null;this.walkFrame=0;
+    const moving=running&&previous&&previous.phase===current.phase&&sim.status!=='dead'&&Math.abs(previous.x-current.x)+Math.abs(previous.y-current.y)===1&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!moving||P.status!=='ready'){this.paint(sim);return;}
+    this.direction=current.x<previous.x?1:current.x>previous.x?2:current.y<previous.y?3:0;
+    const start=performance.now();const animate=now=>{
+      const fraction=Math.min(1,(now-start)/180);this.visualPosition={x:previous.x+(current.x-previous.x)*fraction,y:previous.y+(current.y-previous.y)*fraction};
+      this.walkFrame=fraction<.45?1:fraction<1?2:0;this.paint(sim);this.frame=fraction<1?requestAnimationFrame(animate):null;
+    };animate(start);
+  }
+  paint(sim){
+    const size=sim.phase==='dungeon'?(this.overview?800:416):672,ratio=Math.max(1,Math.min(3,root.devicePixelRatio||1));
+    if(this.canvas.width!==Math.round(size*ratio))this.canvas.width=this.canvas.height=Math.round(size*ratio);
+    this.ctx.imageSmoothingEnabled=false;
+    if(P.status!=='ready'){this.ctx.setTransform(1,0,0,1,0,0);this.fallback.paint(sim);return;}
+    this.ctx.setTransform(ratio,0,0,ratio,0,0);this.rect(0,0,size,size,'#080c13');
+    if(sim.phase==='dungeon'){const p=sim.character.position;this.camera=this.overview?{x:0,y:0}:{x:Math.max(0,Math.min(12,Math.floor(p.x)-6)),y:Math.max(0,Math.min(12,Math.floor(p.y)-6))};this.ctx.save();this.ctx.translate(-this.camera.x*32,-this.camera.y*32);this.dungeon(sim);this.ctx.restore();}else{this.camera={x:0,y:0};this.world(sim);}
+    if(sim.status==='dead'){this.rect(0,0,size,size,'#120c17b8');this.text('冒险终结',size/2,size/2,'#ffe4c0',30);}
+  }
+}
+root.MapView=MapView;
+})(globalThis);

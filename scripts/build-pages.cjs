@@ -10,14 +10,16 @@ const tag = process.env.DEPLOY_TAG;
 if (tag && tag !== 'v' + release.version) throw new Error('Tag and release.json version mismatch');
 const html = fs.readFileSync(path.join(source, 'index.html'), 'utf8');
 const assets = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)=["']([^"']+)["']/g)].map(m => m[1]);
-const files = [...new Set(['index.html', ...assets])];
+const files = [...new Set(['index.html', ...assets, ...(release.runtimeAssets || [])])];
 fs.mkdirSync(output, { recursive: true });
 // Refuse reuse containing unrelated files; no recursive deletion of user directories.
-for (const name of fs.readdirSync(output)) if (![...files, 'version.json', '.nojekyll'].includes(name)) throw new Error('Output contains unrelated data');
+const existing = fs.readdirSync(output,{recursive:true}).filter(name=>fs.lstatSync(path.join(output,name)).isFile());
+for (const name of existing) if (![...files,'version.json','.nojekyll'].includes(name.replace(/\\/g,'/'))) throw new Error('Output contains unrelated data');
 for (const file of files) {
-  if (!/^[A-Za-z0-9_.-]+$/.test(file) || !release.files.includes(file)) throw new Error(`Unapproved runtime asset: ${file}`);
+  if (!/^(?:[A-Za-z0-9_-]+\.(?:html|js|css)|assets\/(?:[a-z0-9-]+\.png|licenses\/[a-z0-9-]+\.txt))$/.test(file) || !release.files.includes(file)) throw new Error(`Unapproved runtime asset: ${file}`);
   const input = path.join(source, file);
   if (!fs.lstatSync(input).isFile() || fs.lstatSync(input).isSymbolicLink()) throw new Error('Unsafe asset');
+  fs.mkdirSync(path.dirname(path.join(output,file)),{recursive:true});
   fs.copyFileSync(input, path.join(output, file));
 }
 fs.writeFileSync(path.join(output, '.nojekyll'), '');

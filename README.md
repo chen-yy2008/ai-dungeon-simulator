@@ -1,4 +1,4 @@
-# AI Dungeon Simulator v0.6.0 · 角色系统进化
+# AI Dungeon Simulator v0.7.0 · 像素奇幻重制
 
 v0.5 新增米菈（旅馆）、赛伦（商旅）、奥林（公会）、薇娅（法师）的真实日程、在场条件、关系与记忆，以及失踪商队、遗迹测绘、道路威胁、药剂研究、欠下人情五条有限分支链。行动/调查/实际战斗结束后至少过一个游戏日，角色再与在场 NPC 回访才结算后果。原商人救助仍保留并遵循返镇与市集时间。NPC 关系与已接受委托进入评分；疲劳和生命安全仍优先。
 
@@ -6,7 +6,7 @@ v0.5 新增米菈（旅馆）、赛伦（商旅）、奥林（公会）、薇娅
 
 v0.4 重制观察界面：原创羊皮纸人物卡、六维属性、折叠详情、故事/事实/骰子三类有限记录、逐格视觉过渡及窄屏排版。六维暂不重算原有战斗参数，等级 1 明确为原型占位，没有经验升级。v0.3 存档在读取时补齐新字段，保留时间、战斗与随机源。
 
-首次基准版本号为 **v0.3.0**，当前正式版本为 **v0.6.0**。后续正式版本的自动提交、标签与推送规范见 [AGENTS.md](AGENTS.md)、[发布指南](docs/PUBLISHING.md) 和 [CHANGELOG.md](CHANGELOG.md)。发布脚本为 `scripts/publish.ps1`，审核文件清单与版本保存在 `release.json`。
+首次基准版本号为 **v0.3.0**，本轮目标版本为 **v0.7.0**（部署核验见进度）。后续正式版本的自动提交、标签与推送规范见 [AGENTS.md](AGENTS.md)、[发布指南](docs/PUBLISHING.md) 和 [CHANGELOG.md](CHANGELOG.md)。发布脚本为 `scripts/publish.ps1`，审核文件清单与版本保存在 `release.json`。
 
 GitHub 公开仓库：[chen-yy2008/ai-dungeon-simulator](https://github.com/chen-yy2008/ai-dungeon-simulator)。
 
@@ -14,9 +14,15 @@ GitHub 公开仓库：[chen-yy2008/ai-dungeon-simulator](https://github.com/chen
 
 艾尔文边境是一个原创的小型奇幻世界。玩家创建一名角色，随后作为旁观者观看它准备物资、穿行森林、处理事件、探索古代地牢、战斗、撤退休息和继续旅行。
 
-使用 HTML5、CSS3、原生 JavaScript 和 Canvas 2D。没有后端、数据库、npm 运行依赖、构建流程、外部图片、字体、CDN、LLM 或付费 API。所有像素角色与地图图形由项目自行绘制，不使用商业游戏官方素材。
+使用 HTML5、CSS3、原生 JavaScript 和 Canvas 2D。没有后端、数据库、npm 运行依赖、构建流程、外部图片、字体、CDN、LLM 或付费 API。主要像素美术来自原作者官方 CC0 Ninja Adventure（Pixel-Boy/AAA）与 Kenney Fantasy UI Borders，图集全部在项目内，不使用商业游戏官方素材。详见 [素材审计](docs/ASSETS.md) 与 [致谢](docs/CREDITS.md)。
 
 ![艾尔文边境世界地图](docs/preview.png)
+
+## v0.7 视觉重制
+
+真实材质、树林/建筑、四方向像素角色/骷髅、肖像与九宫格人物卡。22张PNG共185.7KiB；没有完整包/音乐/Godot。地牢默认13×13跟随镜头，可切原25×25全图，战争迷雾与所有规则不变。手机使用底部「地图 / 人物 / 纪事」，更多操作中保存/读取/重开；360/390px与Retina实测。
+
+[真实 before/after 比较](docs/visual-comparison/README.md) 包含世界、地牢、人物卡和手机截图。正常显示使用图集，失败才回退简化图形并提示。图集一次缓存、视觉动画不消费规则随机数。
 
 ## 启动与体验
 
@@ -158,7 +164,10 @@ ai-dungeon-simulator/
 ├── core.js           # 复用 v0.2 地牢、Explorer、骷髅与 Combat 判定
 ├── events.js         # 数据驱动事件目录与 EventEngine
 ├── world.js          # World、Character 工厂、Agent、Simulation、随机源与存档
-├── view.js           # Canvas 地图与原有像素角色，仅绘图
+├── assets.js         # CC0 图集一次加载与纯视觉映射
+├── assets/           # 审核过的 PNG 与许可
+├── legacy-view.js    # 仅素材失败时的简化后备
+├── view.js           # 图集、镜头、缓存与像素动画，仅绘图
 ├── script.js         # UI 绑定、单计时器、localStorage 与日志呈现
 ├── README.md
 ├── .gitignore
@@ -203,7 +212,7 @@ node tests/world.cjs
 node tests/browser.cjs
 ```
 
-脚本自动寻找浏览器，可通过 `BROWSER_PATH` 指定可执行文件。它用 DevTools 管道、独立浏览器配置和 `file://` 打开页面；注入虚拟时钟加速测试，并单独验证真实计时器。死亡分支使用合法受伤战斗夹具确定性覆盖，不依赖偶然骰点。截图、测试浏览器配置保存在被 Git 忽略的 `test-output/`。
+脚本自动寻找浏览器，可通过 `BROWSER_PATH` 指定可执行文件。它用 DevTools 管道、独立浏览器配置和本地临时 HTTP（像素读取专项）打开页面；设置 BROWSER_FILE=1 实测 file://；注入虚拟时钟加速测试，并单独验证真实计时器。死亡分支使用合法受伤战斗夹具确定性覆盖，不依赖偶然骰点。截图、测试浏览器配置保存在被 Git 忽略的 `test-output/`。
 
 2026-10-13 实际执行结果：
 
