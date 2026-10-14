@@ -30,7 +30,7 @@
     const story = $('story'), atBottom = story.scrollHeight - story.scrollTop - story.clientHeight < 40;
     $('log').replaceChildren(...sim.world.history.slice(-16).reverse().map(r => entry(r)));
     story.replaceChildren(...sim.world.history.slice(-18).map(r => entry(r, true)));
-    const details = sim.world.history.filter(r => ['attack', 'escape', 'decision', 'result', 'battle'].includes(r.type)).slice(-16).reverse();
+    const details = sim.world.history.filter(r => ['attack', 'escape', 'decision', 'result', 'battle', 'quest-check', 'quest-followup'].includes(r.type)).slice(-16).reverse();
     $('detail-log').replaceChildren(...details.map(r => entry(r)));
     if (!details.length) { const li = document.createElement('li'); li.textContent = '尚未进行判定。角色出发后，这里将记录真实骰点与重要选择。'; $('detail-log').append(li); }
     if (atBottom || force) story.scrollTop = story.scrollHeight;
@@ -76,6 +76,13 @@
     text('memory-count', `${c.memories.length} 条记忆`);
     $('memories').replaceChildren(...c.memories.slice(-3).reverse().map(memory => {
       const li = document.createElement('li'); li.textContent = memory.note; return li;
+    }));
+    $('npc-list').replaceChildren(...Object.values(sim.world.npcs).map(n => {
+      const li = document.createElement('li'); li.textContent = `${n.name} · ${n.role} / ${n.location.venue} · ${n.available ? '在场' : '休息或旅行'} / 关系 ${n.relationship}`; li.title = n.hours + '\n' + n.memories.slice(-2).map(m => m.text).join('\n'); return li;
+    }));
+    const stages = { offer: '尚未接取', active: '执行中', combat: '处理遭遇', followup: '等待回访', complete: '已结算' };
+    $('quest-list').replaceChildren(...globalThis.LivingWorld.DEFINITIONS.map(q => {
+      const li = document.createElement('li'); li.textContent = `${q.title} · ${stages[sim.world.quests[q.id].stage]}`; return li;
     }));
     if (renderedPhase !== sim.phase) { $('dungeon').className = sim.phase === 'dungeon' ? 'dungeon-transition' : 'world-transition'; renderedPhase = sim.phase; }
     view.draw(sim); renderLogs(force);

@@ -4,12 +4,13 @@
                          "core.js",
                          "events.js",
                          "index.html",
+                         "living-world.js",
                          "script.js",
                          "style.css",
                          "version.json",
                          "view.js",
                          "world.js"
                      ],
-    "sourceCommit":  "e2480fde38fe10bd19fcd859cdf7757ffa640e27",
-    "version":  "0.4.0"
+    "sourceCommit":  "dac747811331bba3b5e79f008a8220fde49c13c6",
+    "version":  "0.5.0"
 }

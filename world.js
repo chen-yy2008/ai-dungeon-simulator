@@ -2,6 +2,7 @@
   'use strict';
   const D = typeof module !== 'undefined' && module.exports ? require('./core.js') : root.DungeonCore;
   const E = typeof module !== 'undefined' && module.exports ? require('./events.js') : root.AdventureEvents;
+  const L = typeof module !== 'undefined' && module.exports ? require('./living-world.js') : root.LivingWorld;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const copy = value => JSON.parse(JSON.stringify(value));
   const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -82,12 +83,14 @@
       this.flags = {}; this.eventDone = {}; this.siteTimes = {}; this.scouting = 0;
       this.supplies = 3; this.ruinsCleared = false; this.ruinCooldown = 0;
       this.history = []; this.recordId = 0; this.archived = 0;
+      L.install(this); this.lastNpcChanges = L.sync(this);
     }
     get clock() { return { day: Math.floor(this.minutes / 1440) + 1, hour: Math.floor(this.minutes % 1440 / 60), minute: this.minutes % 60 }; }
     advance(minutes) {
       const days = Math.floor((this.minutes + minutes) / 1440) - Math.floor(this.minutes / 1440);
       const before = this.supplies;
       this.minutes += minutes; this.supplies = Math.min(3, this.supplies + days * 2);
+      this.lastNpcChanges = L.sync(this);
       return this.supplies - before;
     }
   }
@@ -143,7 +146,8 @@
     get context() {
       const c = this.character;
       return { region: c.position.region, flags: this.world.flags, done: this.world.eventDone, time: this.world.minutes,
-        gold: c.gold, potions: c.potions, exploreBonus: c.exploreBonus };
+        gold: c.gold, potions: c.potions, exploreBonus: c.exploreBonus,
+        npcAvailable: Object.fromEntries(Object.values(this.world.npcs).map(n => [n.id, n.available && n.location.region === c.position.region])) };
     }
     record(type, title, text, story = text, facts = {}) {
       const world = this.world;
@@ -159,6 +163,7 @@
       const growth = this.world.advance(minutes);
       this.character.fatigue = clamp(this.character.fatigue + fatigue, 0, 100);
       if (growth) this.record('world', '森林恢复', `经过昼夜，森林可采集的补给恢复了 ${growth} 份。`, undefined, { growth });
+      for (const change of this.world.lastNpcChanges) this.record('npc-schedule', '世界日程', `${change.name}由${change.from}转为${change.to}，${change.available ? '可以互动' : '暂不接待'}。`, undefined, change);
     }
     intention(text, reason) { this.character.intent = text; this.character.reason = reason; }
     item(item) {
@@ -215,6 +220,7 @@
     startEvent(definition, chest = null) {
       if (!definition || !this.events.eligible(definition, this.context)) return false;
       this.pending = { id: definition.id, chest: chest?.event || null };
+      L.legacyStarted(this, definition.id);
       this.time(5); this.intention(`处理：${definition.title}`, '先观察事件，再依据性格、资源和风险选择行动。');
       this.record('event', definition.title, definition.description, `${this.character.name}遇见了这样的情景：${definition.description}`, { eventId: definition.id });
       return true;
@@ -248,6 +254,7 @@
       this.record('result', definition.title, `选择「${decision.action.label}」。${check}${detail ? detail + '。' : ''}${item}${passage}${merchant}`,
         `${c.name}选择${decision.action.label}。${check ? (result.check.success ? '尝试成功。' : '尝试失败。') : ''}${detail ? detail + '。' : ''}${item}${passage}${merchant}`,
         { eventId: definition.id, actionId: decision.action.id, check: result.check, changes, item: fx.item || null, flags: fx.flags || {} });
+      L.legacyResult(this, definition.id);
       if (fx.combat) {
         const bandit = { ...D.SKELETON_STATS, hp: 12, maxHp: 12, id: 1, name: '盗匪', ...c.position };
         this.fieldCombat = new D.Encounters([bandit], () => this.random.next(), c);
@@ -276,7 +283,7 @@
           if (success) {
             this.remember('retreated', '曾因生命或疲劳风险主动撤退');
             if (this.phase === 'dungeon') { this.dungeon.ignoredId = combat.battle.target.id; this.dungeon.retreating = true; this.dungeon.explorer.path = []; }
-            else { this.fieldCombat = null; this.destination = { ...TOWN }; this.mission = 'return'; }
+            else { L.battleResult(this, combat.battle.target.name, false); this.fieldCombat = null; this.destination = { ...TOWN }; this.mission = 'return'; }
             combat.battle = null;
           } else combat.battle.turn = 'skeleton';
           return;
@@ -291,6 +298,7 @@
       this.time(1, .5); this.record('attack', `战斗 · 第 ${result.round} 回合`, text, text, { ...result, target: name });
       if (result.turn === 'skeleton' && result.hit) this.remember('injured', '受到敌人攻击，今后更重视退路');
       if (result.victory) {
+        L.battleResult(this, target.name, true);
         const gold = this.random.integer(4, 8); c.gold += gold; c.kills++;
         this.item({ id: target.name ? 'banditToken' : 'bone', name: target.name ? '盗匪铜扣' : '骨雕残片', value: 2 });
         this.record('victory', '战斗胜利', `击败${name}，获得 ${gold} 金币与 1 件${target.name ? '盗匪铜扣' : '骨雕残片'}。`,
@@ -337,6 +345,7 @@
       const c = this.character;
       const followup = E.EVENTS.find(e => e.id === 'merchant_return');
       if (this.events.eligible(followup, this.context)) { this.startEvent(followup); return; }
+      if (L.tryTown(this)) return;
       const loot = c.inventory.filter(i => i.value > 0);
       if (loot.length) {
         const gold = loot.reduce((sum, i) => sum + i.value * i.count, 0); c.gold += gold;
@@ -369,12 +378,13 @@
       const c = this.character, t = c.traits;
       const sites = SITES.filter(p => this.world.minutes - (this.world.siteTimes[D.keyOf(p.x, p.y)] ?? -1000) >= 240);
       const candidates = sites.map((p, index) => ({ action: 'forest', target: p,
-        score: 35 + t.curiosity * .15 + t.greed * .1 - distance(c.position, p) * .6 + index,
-        reason: '选择尚未调查或已经冷却的林间路口，寻找事件与补给。' }));
+        score: 35 + t.curiosity * .15 + t.greed * .1 - distance(c.position, p) * .6 + index +
+          (['caravan', 'threat'].some(id => this.world.quests[id].stage === 'active') ? 30 : 0),
+        reason: ['caravan', 'threat'].some(id => this.world.quests[id].stage === 'active') ? '已接受森林委托，前往已知林间路口调查，健康与资源仍优先。' : '选择尚未调查或已经冷却的林间路口，寻找事件与补给。' }));
       candidates.push({ action: 'ruins', target: RUINS,
         allowed: c.knowledge.includes('ruins') && !this.world.ruinsCleared && this.world.scouting >= 2 &&
           this.world.minutes >= this.world.ruinCooldown && c.fatigue < 55 && c.hp / c.maxHp > this.agent.threshold(c) + .12,
-        score: 45 + t.curiosity * .35 + t.courage * .15 + (c.goal === 'explore' ? 12 : 0) - c.fatigue * .35,
+        score: 45 + t.curiosity * .35 + t.courage * .15 + (c.goal === 'explore' ? 12 : 0) - c.fatigue * .35 + (this.world.quests.survey.stage === 'active' ? 25 : 0),
         reason: '已了解入口并探索过森林，生命与疲劳允许前往古代遗迹。' });
       candidates.push({ action: 'return', target: TOWN, score: sites.length ? 5 : 100,
         reason: '附近路口尚在冷却，回镇整理，避免在两个地点反复游荡。' });
@@ -408,6 +418,7 @@
       if (this.mission === 'ruins') { this.enterDungeon(); return; }
       const key = D.keyOf(c.position.x, c.position.y);
       this.world.siteTimes[key] = this.world.minutes; this.world.scouting++; this.destination = null;
+      if (L.tryForest(this, D)) return;
       const definition = this.events.select(this.context, () => this.random.next());
       if (definition) { this.startEvent(definition); return; }
       if (this.world.supplies > 0) {
@@ -443,6 +454,7 @@
       validateSave(input);
       const save = copy(input), sim = new Simulation(save.config);
       sim.world = Object.assign(new World(), save.world); sim.character = save.character; sim.random.state = save.randomState;
+      if (!save.world.npcs) { L.install(sim.world); sim.world.lastNpcChanges = L.sync(sim.world); }
       // v0.3 additive migration: retain combat statistics, RNG and world facts.
       sim.character.abilities = sim.character.abilities || characterAbilities(sim.character.classId);
       sim.character.level = sim.character.level || 1;
@@ -470,6 +482,7 @@
     const grid = (g, size, values) => Array.isArray(g) && g.length === size && g.every(row => Array.isArray(row) && row.length === size && row.every(v => values.includes(v)));
     if (!save || save.version !== 3 || !save.config || !save.world || !save.character || !['world', 'dungeon'].includes(save.phase) || !['alive', 'dead'].includes(save.status)) fail();
     const c = save.character, w = save.world;
+    if (!L.validate(w)) fail();
     if (c.abilities && !ABILITIES.every(key => Number.isInteger(c.abilities[key]) && number(c.abilities[key], 3, 20))) fail();
     if (c.level !== undefined && c.level !== 1) fail();
     if (!CLASSES[c.classId] || typeof c.name !== 'string' || c.name.length > 24 || !GOALS[c.goal] || !number(c.maxHp, 1, 100) || !number(c.hp, 0, c.maxHp) ||
