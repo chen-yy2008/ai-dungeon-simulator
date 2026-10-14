@@ -1,0 +1,15 @@
+{
+    "managedFiles":  [
+                         ".nojekyll",
+                         "core.js",
+                         "events.js",
+                         "index.html",
+                         "script.js",
+                         "style.css",
+                         "version.json",
+                         "view.js",
+                         "world.js"
+                     ],
+    "sourceCommit":  "e2480fde38fe10bd19fcd859cdf7757ffa640e27",
+    "version":  "0.4.0"
+}
