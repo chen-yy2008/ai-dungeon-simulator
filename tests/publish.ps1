@@ -10,6 +10,7 @@ New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 $realGit = (Get-Command git -CommandType Application | Select-Object -First 1).Source
 $shell = (Get-Command powershell -CommandType Application | Select-Object -First 1).Source
 $manifest = Get-Content (Join-Path $root 'release.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+$releaseTag = 'v' + $manifest.version
 $cases = 0
 
 function Git-Check {
@@ -61,7 +62,7 @@ exit $LASTEXITCODE
     return $folder
 }
 function Publish-Check {
-    param([string]$Folder, [int]$Expected = 1, [string[]]$Extra = @(), [string]$Version = 'v0.3.0')
+    param([string]$Folder, [int]$Expected = 1, [string[]]$Extra = @(), [string]$Version = $releaseTag)
     $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $Folder '.tools\driver.ps1'), '-Version', $Version) + $Extra
     $previousPreference = $ErrorActionPreference
     try { $ErrorActionPreference = 'Continue'; $result = @(& $shell @arguments 2>&1); $code = $LASTEXITCODE }
@@ -112,7 +113,7 @@ $success = Fixture -Name 'success'
 Publish-Check -Folder $success -Expected 0 -Extra @('-DryRun'); Assert-NoCommit $success
 Publish-Check -Folder $success -Expected 0
 $head = Git-Check -Arguments @('-C', $success, 'rev-parse', 'HEAD')
-if ((Git-Check -Arguments @('-C', $success, 'rev-parse', 'v0.3.0^{commit}')) -ne $head) { throw 'Tag does not point to release commit' }
+if ((Git-Check -Arguments @('-C', $success, 'rev-parse', ($releaseTag + '^{commit}'))) -ne $head) { throw 'Tag does not point to release commit' }
 if ((Git-Check -Arguments @('--git-dir', ($success + '-remote.git'), 'rev-parse', 'main')) -ne $head) { throw 'Local bare remote did not receive release' }
 Publish-Check -Folder $success
 if ((Git-Check -Arguments @('-C', $success, 'rev-list', '--count', 'HEAD')) -ne '1') { throw 'Duplicate version created another commit' }
@@ -120,7 +121,7 @@ if ((Git-Check -Arguments @('-C', $success, 'rev-list', '--count', 'HEAD')) -ne 
 $retry = Fixture -Name 'retry'
 Publish-Check -Folder $retry -Extra @('-FailPush')
 $retryHead = Git-Check -Arguments @('-C', $retry, 'rev-parse', 'HEAD')
-if ((Git-Check -Arguments @('-C', $retry, 'rev-parse', 'v0.3.0^{commit}')) -ne $retryHead) { throw 'Failed push did not preserve local tag' }
+if ((Git-Check -Arguments @('-C', $retry, 'rev-parse', ($releaseTag + '^{commit}'))) -ne $retryHead) { throw 'Failed push did not preserve local tag' }
 Publish-Check -Folder $retry -Expected 0 -Extra @('-Resume')
 if ((Git-Check -Arguments @('-C', $retry, 'rev-list', '--count', 'HEAD')) -ne '1') { throw 'Resume created a duplicate commit' }
 

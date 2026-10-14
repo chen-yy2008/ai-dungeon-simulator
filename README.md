@@ -1,4 +1,6 @@
-# AI Dungeon Simulator v0.3 · 世界初生
+# AI Dungeon Simulator v0.4.0 · 奇幻世界观察台
+
+v0.4 重制观察界面：原创羊皮纸人物卡、六维属性、折叠详情、故事/事实/骰子三类有限记录、逐格视觉过渡及窄屏排版。六维暂不重算原有战斗参数，等级 1 明确为原型占位，没有经验升级。v0.3 存档在读取时补齐新字段，保留时间、战斗与随机源。
 
 正式基准版本号为 **v0.3.0**。后续正式版本的自动提交、标签与推送规范见 [AGENTS.md](AGENTS.md)、[发布指南](docs/PUBLISHING.md) 和 [CHANGELOG.md](CHANGELOG.md)。发布脚本为 `scripts/publish.ps1`，审核文件清单与版本保存在 `release.json`。
 

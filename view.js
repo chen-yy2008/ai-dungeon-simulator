@@ -74,8 +74,7 @@
         this.ctx.strokeStyle = '#d8b679'; this.ctx.lineWidth = 2;
         this.ctx.strokeRect(p.x * cell + 3, p.y * cell + 3, cell - 6, cell - 6);
       }
-      this.sprite(sim.character.position, 'hero', cell, sim.character.classId);
-      this.health(sim.character.position, cell, sim.character, '#d8b679');
+      this.actor(sim, cell);
       if (sim.pending || sim.fieldCombat?.battle) this.text(sim.pending ? '?' : '⚔',
         (sim.character.position.x + .5) * cell, sim.character.position.y * cell - 4, '#efca81', 18);
     }
@@ -108,10 +107,30 @@
         }
       }
       this.rect(d.start.x * cell + 3, d.start.y * cell + 3, 7, 7, '#68a99a');
-      this.sprite(sim.character.position, 'hero', cell, sim.character.classId);
-      this.health(sim.character.position, cell, sim.character, '#d8b679');
+      this.actor(sim, cell);
+    }
+    actor(sim, cell) {
+      const p = this.visualPosition || sim.character.position;
+      this.rect(p.x * cell + 1, p.y * cell + 1, cell - 2, cell - 2, '#d8b67918');
+      this.sprite(p, 'hero', cell, sim.character.classId); this.health(p, cell, sim.character, '#d8b679');
     }
     draw(sim) {
+      if (this.frame) cancelAnimationFrame(this.frame);
+      const previous = this.lastPosition, current = { ...sim.character.position, phase: sim.phase };
+      this.lastPosition = current; this.visualPosition = null;
+      const canAnimate = previous && previous.phase === current.phase && sim.status !== 'dead' &&
+        Math.abs(previous.x - current.x) + Math.abs(previous.y - current.y) === 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!canAnimate) { this.paint(sim); return; }
+      const start = performance.now();
+      const animate = now => {
+        const fraction = Math.min(1, (now - start) / 120);
+        this.visualPosition = { x: previous.x + (current.x - previous.x) * fraction, y: previous.y + (current.y - previous.y) * fraction };
+        this.paint(sim);
+        this.frame = fraction < 1 ? requestAnimationFrame(animate) : null;
+      };
+      animate(start);
+    }
+    paint(sim) {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.rect(0, 0, this.canvas.width, this.canvas.height, '#070a0d');
       if (sim.phase === 'dungeon') this.dungeon(sim); else this.world(sim);

@@ -105,6 +105,14 @@ async function run() {
   await send('Page.navigate', { url: fileUrl }); await waitReady();
   await screenshot('creation-v03.png');
   await create();
+  assert.equal(await evaluate(`document.querySelectorAll('#ability-scores strong').length`), 6);
+  assert.equal(await evaluate(`document.querySelector('#ability-scores strong').textContent`), '16');
+  await click('card-collapse'); assert.equal(await evaluate(`document.getElementById('card-collapse').getAttribute('aria-expanded')`), 'false');
+  await click('card-collapse');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
+  assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Narrow layout must not overflow');
+  await screenshot('narrow-v04.png');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1240, height: 1420, deviceScaleFactor: 1, mobile: false });
   assert.equal(await evaluate(`document.getElementById('create-dialog').open`), false);
   assert.equal(await jobs(), 1);
   assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), 250);

@@ -14,6 +14,9 @@
     mage: { name: '法师', maxHp: 22, ac: 12, attackBonus: 5, damageSides: 8, damageBonus: 3, exploreBonus: 7, escapeBonus: 4, weapon: '法杖' }
   };
   const GOALS = { explore: '探索边境', wealth: '积累 100 金币', survive: '平安度过三天' };
+  const ABILITIES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+  const DEFAULT_ABILITIES = { warrior: [16, 12, 14, 10, 12, 10], rogue: [10, 16, 12, 12, 14, 10], mage: [8, 12, 12, 16, 14, 10] };
+  function characterAbilities(classId) { return Object.fromEntries(ABILITIES.map((key, i) => [key, DEFAULT_ABILITIES[classId][i]])); }
 
   class Random {
     constructor(seed) {
@@ -32,6 +35,7 @@
     const traits = Object.fromEntries(Object.keys(TRAITS).map(key => [key,
       Number.isFinite(Number(config.traits?.[key])) ? clamp(Math.round(Number(config.traits[key])), 0, 100) : defaults[key]]));
     return { ...stats, name: String(config.name || '艾尔文').trim().slice(0, 24) || '艾尔文', classId,
+      abilities: characterAbilities(classId), level: 1,
       traits, goal: GOALS[config.goal] ? config.goal : 'explore', hp: stats.maxHp,
       gold: 24, potions: 2, fatigue: 0, kills: 0, moves: 0,
       position: { ...TOWN, region: 'town' }, knowledge: ['town', 'forest'], memories: [],
@@ -439,6 +443,9 @@
       validateSave(input);
       const save = copy(input), sim = new Simulation(save.config);
       sim.world = Object.assign(new World(), save.world); sim.character = save.character; sim.random.state = save.randomState;
+      // v0.3 additive migration: retain combat statistics, RNG and world facts.
+      sim.character.abilities = sim.character.abilities || characterAbilities(sim.character.classId);
+      sim.character.level = sim.character.level || 1;
       for (const key of ['phase', 'status', 'actions', 'mission', 'destination', 'pending', 'lastRest']) sim[key] = save[key];
       const restoreCombat = data => {
         if (!data) return null;
@@ -463,6 +470,8 @@
     const grid = (g, size, values) => Array.isArray(g) && g.length === size && g.every(row => Array.isArray(row) && row.length === size && row.every(v => values.includes(v)));
     if (!save || save.version !== 3 || !save.config || !save.world || !save.character || !['world', 'dungeon'].includes(save.phase) || !['alive', 'dead'].includes(save.status)) fail();
     const c = save.character, w = save.world;
+    if (c.abilities && !ABILITIES.every(key => Number.isInteger(c.abilities[key]) && number(c.abilities[key], 3, 20))) fail();
+    if (c.level !== undefined && c.level !== 1) fail();
     if (!CLASSES[c.classId] || typeof c.name !== 'string' || c.name.length > 24 || !GOALS[c.goal] || !number(c.maxHp, 1, 100) || !number(c.hp, 0, c.maxHp) ||
       !number(c.gold, 0) || !Number.isInteger(c.gold) || !number(c.potions, 0, 9) || !Number.isInteger(c.potions) || !number(c.fatigue, 0, 100) ||
       !number(c.ac, 1, 30) || !number(c.attackBonus, 0, 20) || !number(c.damageSides, 1, 20) || !number(c.damageBonus, 0, 20) ||
@@ -523,7 +532,7 @@
     if (save.fieldCombat) combat(save.fieldCombat);
   }
 
-  const api = { Random, World, Agent, Simulation, createCharacter, CLASSES, TRAITS, GOALS, TOWN, RUINS, SITES, findPath, validateSave };
+  const api = { Random, World, Agent, Simulation, createCharacter, CLASSES, TRAITS, GOALS, ABILITIES, characterAbilities, TOWN, RUINS, SITES, findPath, validateSave };
   root.Adventure = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

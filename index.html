@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Dungeon Simulator v0.3 · 世界初生</title>
+  <title>AI Dungeon Simulator v0.4.0 · 奇幻世界观察台</title>
   <link rel="stylesheet" href="style.css">
   <script src="core.js" defer></script>
   <script src="events.js" defer></script>
@@ -13,7 +13,7 @@
 </head>
 <body>
   <main class="app">
-    <header class="header"><div><p class="eyebrow">自主冒险世界 / V0.3 · 世界初生</p><h1>艾尔文边境</h1><p class="subtitle">AI Dungeon Simulator · 一位冒险者，一个拥有记忆的世界。</p></div><div class="world-clock"><span>世界时间</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
+    <header class="header"><div><p class="eyebrow">AI DUNGEON SIMULATOR / V0.4.0</p><h1>艾尔文边境<span class="header-seal">世界观察台</span></h1><p class="subtitle">让冒险者决定命运。你，只需见证。</p></div><div class="world-clock"><span>✦ 世界历 · 与播放速度独立</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
     <div class="toolbar" aria-label="模拟控制">
       <button id="toggle" class="primary" type="button">开始模拟</button>
       <select id="speed" aria-label="播放速度"><option value="slow">慢速 · 700 ms</option><option value="normal" selected>正常 · 250 ms</option><option value="fast">快速 · 60 ms</option></select>
@@ -33,6 +33,8 @@
       </section>
       <aside class="sidebar">
         <section class="panel character-panel"><div class="panel-heading"><div><h2 id="character-name">艾尔文</h2><span id="class-label">战士</span></div><button id="details" class="text-button" type="button">角色详情 ↗</button></div>
+          <div class="card-rank"><span id="level-label">原型等级 1 · 暂无升级</span><button id="card-collapse" class="text-button" type="button" aria-expanded="true">折叠属性</button></div>
+          <div id="ability-scores" class="ability-scores" aria-label="六维属性"></div>
           <div id="trait-summary" class="trait-summary"></div>
           <div class="health-heading"><span>生命值</span><strong id="hp"></strong></div><div class="health-track" role="progressbar" aria-label="生命值" aria-valuemin="0"><div id="hp-bar"></div></div>
           <div class="health-heading fatigue-heading"><span>疲劳</span><strong id="fatigue"></strong></div><div class="health-track" role="progressbar" aria-label="疲劳" aria-valuemin="0" aria-valuemax="100"><div id="fatigue-bar"></div></div>
@@ -47,6 +49,7 @@
     <div class="chronicle-layout">
       <section class="panel"><div class="panel-heading"><h2>冒险叙事</h2><span>源自实际发生的事件</span></div><div id="story" class="story" aria-label="最近的冒险故事"></div></section>
       <section class="panel"><div class="panel-heading"><h2>世界事件记录</h2><button id="history" class="text-button" type="button">浏览冒险历史 ↗</button></div><ol id="log" aria-label="实际规则与状态变化"></ol></section>
+      <section class="panel detail-chronicle"><div class="panel-heading"><h2>骰子与决策</h2><span>实际判定 · 最近 16 条</span></div><ol id="detail-log" aria-label="战斗、骰子和决策详情"></ol></section>
     </div>
     <footer>原创 Canvas 像素图形 · 原生 JavaScript · 无后端 / 无外部 API · 地牢视野仅自身与四邻格</footer>
   </main>

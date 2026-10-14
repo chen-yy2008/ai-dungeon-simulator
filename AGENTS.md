@@ -4,6 +4,9 @@
 
 ## 开发
 
+- 当前已批准有限队列：v0.4.0 UI → Pages → v0.5.0 世界 → v0.6.0 角色，完成后停止。详细要求见用户任务书与 docs/specs，进度记录于 docs/DEVELOPMENT_STATUS.md，每版更新 docs/releases 报告。
+- 阶段开始检查 PAUSE_AUTODEV；标记存在则保存状态并停止后续阶段。普通问题自主修复，权限/重大失败不绕过；同一阻碍最多约三轮针对性尝试。
+
 - 每次开发先阅读现有代码结构、README.md、CHANGELOG.md、release.json 和相关测试。
 - 复用现有地图、探索、战斗及世界系统，避免无关重写或引入大型依赖。
 - 保持普通脚本与 file:// 运行兼容；不添加未经要求的玩法或外部 API。

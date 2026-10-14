@@ -19,11 +19,18 @@ $phase = 'preflight'
 function Invoke-Git {
     param([string[]]$Arguments, [switch]$AllowFailure)
     $previousPreference = $ErrorActionPreference
+    $errorDirectory = Join-Path $projectRoot 'test-output\git-stderr'
+    New-Item -ItemType Directory -Path $errorDirectory -Force | Out-Null
+    $errorFile = Join-Path $errorDirectory ([guid]::NewGuid().ToString('N') + '.tmp')
     try {
         $ErrorActionPreference = 'Continue'
-        $result = @(& git -c ("safe.directory=" + $projectRoot.Replace('\', '/')) -C $projectRoot @Arguments 2>&1)
+        # Keep harmless CRLF/fetch warnings separate from data returned to guards.
+        $result = @(& git -c ("safe.directory=" + $projectRoot.Replace('\', '/')) -C $projectRoot @Arguments 2> $errorFile)
         $code = $LASTEXITCODE
-    } finally { $ErrorActionPreference = $previousPreference }
+    } finally {
+        $ErrorActionPreference = $previousPreference
+        Remove-Item -LiteralPath $errorFile -ErrorAction SilentlyContinue
+    }
     if ($code -ne 0 -and -not $AllowFailure) {
         # Do not echo credentials or remote error bodies into chat/logs.
         throw "Git $($Arguments[0]) failed (exit $code) during $phase. Check authentication, network, or remote history. No force/rewrite attempted."
@@ -101,6 +108,9 @@ try {
     Run-Node -Arguments @('tests/check.cjs')
     Run-Node -Arguments @('tests/world.cjs')
     Run-Node -Arguments @('tests/browser.cjs')
+    foreach ($file in $manifest.files) {
+        if ($file -match '^tests/[A-Za-z0-9_.-]+\.cjs$' -and $file -notin @('tests/check.cjs', 'tests/world.cjs', 'tests/browser.cjs')) { Run-Node -Arguments @($file) }
+    }
     # Reinspect after tests. Generated browser data must remain ignored.
     Run-Node -Arguments @('scripts/check-release.cjs')
     if ((File-Snapshot) -ne $testedSnapshot) { throw 'Release source files changed while tests ran. Rerun tests before publication.' }
@@ -114,7 +124,7 @@ try {
         # Exact reviewed paths only, including reviewed tracked deletions.
         $arguments = @('add', '-A', '--') + @($manifest.files | ForEach-Object { [string]$_ })
         Invoke-Git -Arguments $arguments | Out-Null
-        $staged = Invoke-Git -Arguments @('diff', '--cached', '--name-only')
+        $staged = Invoke-Git -Arguments @('-c', 'core.quotePath=false', 'diff', '--cached', '--name-only')
         if (-not $staged) { throw 'No release changes are staged. Refusing an empty release commit.' }
         foreach ($file in ($staged -split "`n")) { if ($manifest.files -notcontains $file) { throw "Unexpected staged file: $file" } }
         if ((File-Snapshot) -ne $testedSnapshot) { throw 'Source files changed after tests/staging. Review the preserved index and retry.' }

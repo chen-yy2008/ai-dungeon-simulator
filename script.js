@@ -30,12 +30,20 @@
     const story = $('story'), atBottom = story.scrollHeight - story.scrollTop - story.clientHeight < 40;
     $('log').replaceChildren(...sim.world.history.slice(-16).reverse().map(r => entry(r)));
     story.replaceChildren(...sim.world.history.slice(-18).map(r => entry(r, true)));
+    const details = sim.world.history.filter(r => ['attack', 'escape', 'decision', 'result', 'battle'].includes(r.type)).slice(-16).reverse();
+    $('detail-log').replaceChildren(...details.map(r => entry(r)));
+    if (!details.length) { const li = document.createElement('li'); li.textContent = '尚未进行判定。角色出发后，这里将记录真实骰点与重要选择。'; $('detail-log').append(li); }
     if (atBottom || force) story.scrollTop = story.scrollHeight;
   }
   function render(force = false) {
     const c = sim.character, battle = sim.combat?.battle;
     text('clock', timestamp(sim.world.minutes)); text('seed-label', `种子 ${sim.config.seed}`);
     text('character-name', c.name); text('class-label', `${A.CLASSES[c.classId].name} · ${regionNames[c.position.region]}`);
+    text('level-label', `原型等级 ${c.level} · 暂无升级`);
+    $('ability-scores').replaceChildren(...A.ABILITIES.map(key => {
+      const item = document.createElement('div'), label = document.createElement('span'), value = document.createElement('strong');
+      label.textContent = key; value.textContent = c.abilities[key]; item.append(label, value); return item;
+    }));
     text('trait-summary', Object.entries(c.traits).map(([key, value]) => `${A.TRAITS[key]} ${value}`).join(' · '));
     health('hp', 'hp-bar', c.hp, c.maxHp); health('fatigue', 'fatigue-bar', Math.round(c.fatigue), 100);
     text('gold', c.gold); text('potions', c.potions); text('kills', c.kills);
@@ -131,6 +139,7 @@
   $('details').addEventListener('click', () => {
     const c = sim.character, rows = [
       ['角色', `${c.name} · ${A.CLASSES[c.classId].name}`], ['长期目标', A.GOALS[c.goal]], ['位置', `${regionNames[c.position.region]} (${c.position.x}, ${c.position.y})`],
+      ['六维与等级', `${A.ABILITIES.map(key => key + ' ' + c.abilities[key]).join(' / ')} · 原型等级 ${c.level}（暂无成长系统，不影响既有战斗数值）`],
       ['能力', `HP ${c.hp}/${c.maxHp}，AC ${c.ac}，攻击 +${c.attackBonus}，伤害 1d${c.damageSides}+${c.damageBonus}，调查 +${c.exploreBonus}，脱离 +${c.escapeBonus}`],
       ['性格', Object.entries(c.traits).map(([key, value]) => `${A.TRAITS[key]} ${value}`).join(' / ')],
       ['物资', `${c.gold} 金币，${c.potions} 瓶药水，疲劳 ${c.fatigue.toFixed(1)}`], ['背包', c.inventory.map(i => `${i.name}×${i.count}`).join('、')],
@@ -151,6 +160,10 @@
     moreHistory(); $('history-dialog').showModal();
   });
   $('history-more').addEventListener('click', moreHistory);
+  $('card-collapse').addEventListener('click', () => {
+    const compact = document.querySelector('.character-panel').classList.toggle('compact');
+    $('card-collapse').setAttribute('aria-expanded', String(!compact)); text('card-collapse', compact ? '展开属性' : '折叠属性');
+  });
   window.addEventListener('pagehide', () => { if (started && storageAvailable) save(false); });
   $('seed-input').value = sim.config.seed; classDescription(); render(true); $('create-dialog').showModal();
 })();

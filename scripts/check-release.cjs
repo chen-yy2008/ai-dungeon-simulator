@@ -25,7 +25,7 @@ function main() {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(release.version) || release.branch !== 'main' ||
       !Array.isArray(release.files) || new Set(release.files).size !== release.files.length) throw new Error('Invalid release manifest.');
   for (const file of release.files) {
-    if (!/^[A-Za-z0-9_.\/-]+$/.test(file) || file.startsWith('/') || file.split('/').includes('..') || forbidden.test(file)) throw new Error(`Unapproved release path: ${file}`);
+    if (!/^[\p{L}\p{N}_.\/-]+$/u.test(file) || file.startsWith('/') || file.split('/').some(p => !p || p === '..' || p === '.') || forbidden.test(file)) throw new Error(`Unapproved release path: ${file}`);
     const absolute = path.join(root, file);
     if (!fs.existsSync(absolute)) {
       if (!git(['ls-files', '--', file]).trim()) throw new Error(`Missing release file: ${file}`);
