@@ -1,0 +1,51 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+coverage/
+test-output/
+*.save.json
+
+# 本地配置、密钥与认证资料（已提交内容需要另外清查历史）
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+credentials.json
+secrets.json
+.ssh/
+.aws/
+.tools/
+.local/
+
+# 浏览器资料、缓存与测试生成物
+test-output/browser-profile/
+browser-profile/
+user-data/
+User Data/
+Cookies
+Cookies-journal
+Login Data
+Login Data-journal
+Local State
+Web Data
+Web Data-journal
+Cache/
+Code Cache/
+GPUCache/
+__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+*.tmp
+*.temp
+*.bak
+*.zip
+*.7z
+*.tar
+*.gz
+.vscode/
+.idea/

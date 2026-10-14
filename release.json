@@ -1,0 +1,11 @@
+{
+  "version": "0.3.0",
+  "branch": "main",
+  "files": [
+    ".gitignore", ".gitattributes", "AGENTS.md", "CHANGELOG.md", "README.md", "release.json",
+    "index.html", "style.css", "core.js", "events.js", "world.js", "view.js", "script.js",
+    "docs/preview.png", "docs/dungeon.png", "docs/PUBLISHING.md",
+    "scripts/publish.ps1", "scripts/check-release.cjs",
+    "tests/check.cjs", "tests/world.cjs", "tests/browser.cjs", "tests/publish.ps1"
+  ]
+}
