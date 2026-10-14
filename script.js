@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   if (typeof document === 'undefined') return;
-  const A = globalThis.Adventure;
+  const A = globalThis.Adventure, F = globalThis.FateRules;
   const $ = id => document.getElementById(id);
   const text = (id, value) => { $(id).textContent = value; };
   const cards = globalThis.CharacterCard, editor = new globalThis.CardEditor(cards, $);
@@ -41,8 +41,17 @@
     const c = sim.character, battle = sim.combat?.battle;
     text('clock', timestamp(sim.world.minutes)); text('seed-label', `种子 ${sim.config.seed}`);
     text('character-name', c.name); text('class-label', `${A.CLASSES[c.classId].name} · ${regionNames[c.position.region]}`);
-    text('level-label', `设定等级 ${c.level} · 无经验成长`);
-    text('card-ac', c.ac); text('card-goal', A.GOALS[c.goal]); text('card-gear', c.inventory.find(i => i.id === 'weapon')?.name || '无初始武器');
+    text('level-label', '背景设定等级 '+c.level+' · 不等于战斗等级');
+    const patron=F.PATRONS[c.classId],r=c.rpg;
+    text('patron-name',patron.name);text('patron-symbol',patron.symbol);$('patron-symbol').style.background=patron.color; text('patron-oracle',patron.oracle);text('patron-rule',patron.blessing+'。神迹消耗35神眷，一场一次；实际到神龛祈祷，每天一次。'+patron.creed);
+    text('combat-level','战斗等级 '+r.combatLevel+' / 5');text('xp-progress',r.combatLevel===5?'成长路线已满级':r.xp+' / '+F.CURVE[r.combatLevel]+' XP');
+    text('grace','神眷 '+r.grace+' / 100');text('skill-resource',c.classId==='mage'?'MP '+r.mp+' / '+r.maxMp:'体力 '+r.stamina+' / '+r.maxStamina);
+    $('equipment-slots').replaceChildren(...Object.entries(r.equipment).map(([slot,id])=>{const p=document.createElement('p'),icon=document.createElement('img'),label=document.createElement('span');const gear=id?F.item(id):null;icon.src='assets/'+(gear?.icon||'bag')+'.png';icon.alt='';icon.className='item-icon';label.textContent=({weapon:'武器',armor:'护甲',trinket:'饰品'}[slot])+': '+(gear?.name||'尚未装备');p.append(icon,label);return p}));
+    const recent=sim.world.history.filter(x=>['miracle','levelup','equip'].includes(x.type)).slice(-1)[0] || sim.world.history.filter(x=>['attack','skill','heal','counter'].includes(x.type)).slice(-1)[0];
+    text('battle-replay',recent?'最近关键 · '+timestamp(recent.time)+' · '+recent.title+' · '+recent.text:'等待第一次真实战斗或成长。');
+    document.querySelector('.combat-panel').classList.toggle('battle-emphasis',!!battle);
+
+    text('card-ac', c.ac); text('card-goal', A.GOALS[c.goal]); text('card-gear',F.item(c.rpg.equipment.weapon)?.name || '无武器');
     if (renderedClass !== c.classId) { $('portrait').src = 'assets/' + globalThis.PixelAssets.heroes[c.classId] + '-portrait.png'; $('portrait').alt = A.CLASSES[c.classId].name + '原型像素头像'; renderedClass = c.classId; }
     const abilitiesKey = JSON.stringify(c.abilities);
     if (renderedAbilities !== abilitiesKey) { renderedAbilities = abilitiesKey; $('ability-scores').replaceChildren(...A.ABILITIES.map(key => {
@@ -92,7 +101,7 @@
       const li = document.createElement('li'); li.textContent = `${q.title} · ${stages[sim.world.quests[q.id].stage]}`; return li;
     }));
     if (renderedPhase !== sim.phase) { $('dungeon').className = sim.phase === 'dungeon' ? 'dungeon-transition' : 'world-transition'; renderedPhase = sim.phase; }
-    view.draw(sim, running); renderLogs(force);
+    view.effects=$('effects-input').checked;view.draw(sim, running); renderLogs(force);
   }
   function cancelTimer() { if (timer !== null) clearTimeout(timer); timer = null; }
   function schedule() { cancelTimer(); if (running && sim.status !== 'dead') timer = setTimeout(tick, delays[$('speed').value]); }
@@ -131,7 +140,7 @@
   $('load').addEventListener('click', () => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) { notify('尚无 v0.3 本地存档。'); return; }
+      if (!raw) { notify('尚无本地冒险存档。'); return; }
       const restored = A.Simulation.fromSave(JSON.parse(raw));
       replaceSimulation(restored); started = true; render(true); $('create-dialog').close();
       notify('已恢复存档并暂停；点击继续模拟后从同一随机源状态继续。');
@@ -139,7 +148,8 @@
   });
   function classDescription() {
     const c = A.CLASSES[$('class-input').value];
-    text('class-description', `${c.name}：HP ${c.maxHp} · AC ${c.ac} · 攻击 +${c.attackBonus} · 1d${c.damageSides}+${c.damageBonus} · 调查 +${c.exploreBonus} · 脱离 +${c.escapeBonus}。法师仅使用普通攻击，本版没有法术系统。`);
+    text('patron-description',F.PATRONS[$('class-input').value].name+' · '+F.PATRONS[$('class-input').value].oracle+' '+F.PATRONS[$('class-input').value].creed+' '+F.PATRONS[$('class-input').value].blessing+' 技能：'+F.SKILLS[$('class-input').value].join('、')+'。');
+    text('class-description', `${c.name}：HP ${c.maxHp} · AC ${c.ac} · 攻击 +${c.attackBonus} · 1d${c.damageSides}+${c.damageBonus} · 调查 +${c.exploreBonus} · 脱离 +${c.escapeBonus}。职业技能由AI按资源与风险自行使用，选职业即绑定神明。`);
   }
   $('class-input').addEventListener('change', () => { classDescription(); editor.defaults($('class-input').value); });
   $('class-input').addEventListener('card-import', classDescription);
@@ -155,10 +165,10 @@
   document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => $(button.dataset.close).close()));
   $('details').addEventListener('click', () => {
     const c = sim.character, rows = [
-      ['角色', `${c.name} · ${A.CLASSES[c.classId].name}`], ['长期目标', A.GOALS[c.goal]], ['身份与背景', c.profile.identity + ' / ' + c.profile.background],
+      ['角色', `${c.name} · ${A.CLASSES[c.classId].name}`], ['长期目标', A.GOALS[c.goal]], ['守护神', F.PATRONS[c.classId].name+' / '+F.PATRONS[c.classId].creed], ['实际成长', '战斗等级 '+c.rpg.combatLevel+'，XP '+c.rpg.xp+'，神迹已发动 '+c.rpg.miracles+' 次'], ['职业技能', JSON.stringify(c.rpg.skills)], ['身份与背景', c.profile.identity + ' / ' + c.profile.background],
       ['价值观与行为', c.profile.values.join('、') + ' / 冒险意愿 ' + c.profile.behavior.riskTolerance + '，助人 ' + c.profile.behavior.altruism + '，自律 ' + c.profile.behavior.discipline],
       ['设定愿望', c.profile.shortGoal + ' / ' + c.profile.longGoal], ['描述能力与弱点', c.profile.basicAbilities.join('、') + ' / ' + c.profile.weaknesses.join('、')], ['位置', `${regionNames[c.position.region]} (${c.position.x}, ${c.position.y})`],
-      ['六维与等级', `${A.ABILITIES.map(key => key + ' ' + c.abilities[key]).join(' / ')} · 设定等级 ${c.level}（暂无成长系统，不影响既有战斗数值）`],
+      ['六维与等级', `${A.ABILITIES.map(key => key + ' ' + c.abilities[key]).join(' / ')} · 设定等级 ${c.level}（背景数据；战斗等级和装备决定实际成长）`],
       ['能力', `HP ${c.hp}/${c.maxHp}，AC ${c.ac}，攻击 +${c.attackBonus}，伤害 1d${c.damageSides}+${c.damageBonus}，调查 +${c.exploreBonus}，脱离 +${c.escapeBonus}`],
       ['性格', Object.entries(c.traits).map(([key, value]) => `${A.TRAITS[key]} ${value}`).join(' / ')],
       ['物资', `${c.gold} 金币，${c.potions} 瓶药水，疲劳 ${c.fatigue.toFixed(1)}`], ['背包', c.inventory.map(i => `${i.name}×${i.count}`).join('、')],

@@ -36,4 +36,4 @@ for (const f of ['core.js','world.js','events.js','living-world.js','character-c
     if (old.status === 0) assert.equal(fs.readFileSync(path.join(root,f),'utf8').replace(/\r\n/g,'\n'),old.stdout.replace(/\r\n/g,'\n'));
   }
 }
-console.log(`Asset checks passed: ${manifest.sources.length} original-channel CC0 PNGs, ${bytes} bytes; SHA, runtime inclusion, road mapping and unchanged v0.6 rules.`);
+console.log(`Asset checks passed: ${manifest.sources.length} original-channel CC0 PNGs, ${bytes} bytes; SHA, runtime inclusion, road mapping and preserved v0.7 CC0 art.`);

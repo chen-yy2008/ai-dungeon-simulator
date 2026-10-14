@@ -1,5 +1,5 @@
 {
-  "version": "0.7.0",
+  "version": "0.8.0",
   "branch": "main",
   "files": [
     ".gitignore",
@@ -94,7 +94,16 @@
     "docs/visual-comparison/README.md",
     "docs/specs/v0.8-spec.md",
     "docs/specs/v0.9-spec.md",
-    "docs/specs/v1.0-spec.md"
+    "docs/specs/v1.0-spec.md",
+    "progression.js",
+    "tests/fate.cjs",
+    "docs/releases/v0.8-report.md",
+    "docs/v08/miracle-warrior.png",
+    "docs/v08/miracle-rogue.png",
+    "docs/v08/miracle-mage.png",
+    "docs/v08/upgrade-warrior.png",
+    "docs/v08/upgrade-rogue.png",
+    "docs/v08/upgrade-mage.png"
   ],
   "runtimeAssets": [
     "assets/field.png",

@@ -178,10 +178,10 @@
       return target;
     }
 
-    advance() {
+    advance(resolveAttack = attack) {
       if (!this.battle || this.hero.hp <= 0) return null;
       const { target, turn, round } = this.battle;
-      const result = attack(turn === 'hero' ? this.hero : target, turn === 'hero' ? target : this.hero, this.random);
+      const result = resolveAttack(turn === 'hero' ? this.hero : target, turn === 'hero' ? target : this.hero, this.random);
       const victory = target.hp === 0;
       const failed = this.hero.hp === 0;
       if (victory) { this.kills++; this.battle = null; }

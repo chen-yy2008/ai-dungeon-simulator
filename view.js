@@ -46,9 +46,10 @@ class MapView extends root.LegacyMapView {
     if(sim.destination){const p=sim.destination;this.ctx.strokeStyle='#fff0b0';this.ctx.lineWidth=2;this.ctx.strokeRect(p.x*cell+3,p.y*cell+3,cell-6,cell-6);}
     const npcSprites={innkeeper:'woman',merchant:'noble',guild:'villager',mage:'sorcererblack'};
     for(const [i,n]of Object.values(sim.world.npcs).entries()){
-      if(!n.available)continue;const p=n.location,offset=p.region==='town'?(i-1.5)*.42:0;
+      if(!n.available&&sim.pending?.npcLock!==n.id)continue;const p=n.location,offset=p.region==='town'?(i-1.5)*.42:0;
       this.sprite({x:p.x+offset,y:p.y-.55},npcSprites[n.id]||'villager',cell);
     }
+    if(root.FateRules){const h=root.Adventure.TOWN;this.text('✧',(h.x+.5)*cell,(h.y+.5)*cell,'#fff1b5',22);}
     this.actor(sim,cell);
     if(sim.fieldCombat?.battle){const p=sim.character.position;this.sprite({x:p.x+.7,y:p.y},'hunter',cell,1);this.label('道路遭遇',(p.x+.5)*cell,p.y*cell-18,'#ffd2a0');}
     else if(sim.pending)this.text('!',(sim.character.position.x+.5)*cell,sim.character.position.y*cell-9,'#fff1b3',21);
@@ -86,13 +87,28 @@ class MapView extends root.LegacyMapView {
   draw(sim,running=false){
     this.sim=sim;if(this.frame)cancelAnimationFrame(this.frame);this.frame=null;
     const previous=this.lastPosition,current={...sim.character.position,phase:sim.phase};this.lastPosition=current;this.visualPosition=null;this.walkFrame=0;
-    const moving=running&&previous&&previous.phase===current.phase&&sim.status!=='dead'&&Math.abs(previous.x-current.x)+Math.abs(previous.y-current.y)===1&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(!moving||P.status!=='ready'){this.paint(sim);return;}
-    this.direction=current.x<previous.x?1:current.x>previous.x?2:current.y<previous.y?3:0;
-    const start=performance.now();const animate=now=>{
-      const fraction=Math.min(1,(now-start)/180);this.visualPosition={x:previous.x+(current.x-previous.x)*fraction,y:previous.y+(current.y-previous.y)*fraction};
-      this.walkFrame=fraction<.45?1:fraction<1?2:0;this.paint(sim);this.frame=fraction<1?requestAnimationFrame(animate):null;
+    const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const latest=sim.world.history.filter(r=>['attack','miracle','levelup','equip','heal','counter'].includes(r.type)).slice(-1)[0];
+    const fresh=latest&&latest.id!==this.effectId;this.effectId=latest?.id;
+    this.effect=running&&this.effects!==false&&!reduced&&fresh?{type:latest.type,damage:latest.facts.damage||latest.facts.healed||0,turn:latest.facts.turn,alpha:1}:null;
+    const moving=running&&previous&&previous.phase===current.phase&&sim.status!=='dead'&&Math.abs(previous.x-current.x)+Math.abs(previous.y-current.y)===1&&!reduced;
+    if((!moving&&!this.effect)||P.status!=='ready'){this.paint(sim);return;}
+    if(moving)this.direction=current.x<previous.x?1:current.x>previous.x?2:current.y<previous.y?3:0;
+    const start=performance.now(),duration=this.effect?360:180;const animate=now=>{
+      const elapsed=now-start,fraction=Math.min(1,elapsed/180);
+      if(moving){this.visualPosition={x:previous.x+(current.x-previous.x)*fraction,y:previous.y+(current.y-previous.y)*fraction};this.walkFrame=fraction<.45?1:fraction<1?2:0;}
+      if(this.effect)this.effect.alpha=Math.max(0,1-elapsed/360);this.paint(sim);this.frame=elapsed<duration?requestAnimationFrame(animate):null;
     };animate(start);
+  }
+  feedback(sim){
+    if(!this.effect||this.effect.alpha<=0)return;const f=this.effect,p=this.visualPosition||sim.character.position;
+    let target=p;if(f.type==='attack'&&f.turn==='hero'&&sim.combat?.battle)target=sim.combat.battle.target;
+    // 精灵反馈局限于实际已知的目标格，光圈不透露迷雾。
+    this.ctx.save();this.ctx.beginPath();this.ctx.rect(target.x*32,target.y*32,32,32);this.ctx.clip();this.ctx.globalAlpha=f.alpha;
+    const color=f.type==='miracle'?'#d3a7ff':f.type==='heal'?'#a2f4b2':f.type==='attack'?'#f3b096':'#ffe4a0';
+    this.ctx.strokeStyle=color;this.ctx.lineWidth=2;this.ctx.strokeRect(target.x*32+1,target.y*32+1,30,30);
+    const label=f.type==='attack'||f.type==='counter'?String(f.damage):f.type==='miracle'?'✧':f.type==='heal'?'+'+f.damage:'↑';
+    this.text(label,(target.x+.5)*32,target.y*32+12,color,16);this.ctx.restore();
   }
   paint(sim){
     const size=sim.phase==='dungeon'?(this.overview?800:416):672,ratio=Math.max(1,Math.min(3,root.devicePixelRatio||1));
@@ -100,7 +116,7 @@ class MapView extends root.LegacyMapView {
     this.ctx.imageSmoothingEnabled=false;
     if(P.status!=='ready'){this.ctx.setTransform(1,0,0,1,0,0);this.fallback.paint(sim);return;}
     this.ctx.setTransform(ratio,0,0,ratio,0,0);this.rect(0,0,size,size,'#080c13');
-    if(sim.phase==='dungeon'){const p=sim.character.position;this.camera=this.overview?{x:0,y:0}:{x:Math.max(0,Math.min(12,Math.floor(p.x)-6)),y:Math.max(0,Math.min(12,Math.floor(p.y)-6))};this.ctx.save();this.ctx.translate(-this.camera.x*32,-this.camera.y*32);this.dungeon(sim);this.ctx.restore();}else{this.camera={x:0,y:0};this.world(sim);}
+    if(sim.phase==='dungeon'){const p=sim.character.position;this.camera=this.overview?{x:0,y:0}:{x:Math.max(0,Math.min(12,Math.floor(p.x)-6)),y:Math.max(0,Math.min(12,Math.floor(p.y)-6))};this.ctx.save();this.ctx.translate(-this.camera.x*32,-this.camera.y*32);this.dungeon(sim);this.feedback(sim);this.ctx.restore();}else{this.camera={x:0,y:0};this.world(sim);this.feedback(sim);}
     if(sim.status==='dead'){this.rect(0,0,size,size,'#120c17b8');this.text('冒险终结',size/2,size/2,'#ffe4c0',30);}
   }
 }

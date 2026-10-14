@@ -44,7 +44,7 @@ jobs:
           node tests/check.cjs
           node tests/world.cjs
           node tests/browser.cjs
-          for f in tests/ui.cjs tests/pages.cjs tests/living-world.cjs tests/character.cjs tests/assets.cjs; do
+          for f in tests/ui.cjs tests/pages.cjs tests/living-world.cjs tests/character.cjs tests/assets.cjs tests/fate.cjs; do
             if [ -f "$f" ]; then node "$f"; fi
           done
       - run: node tooling/scripts/build-pages.cjs --source source --output _site

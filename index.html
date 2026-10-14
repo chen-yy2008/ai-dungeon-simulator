@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Dungeon Simulator v0.7.0 · 像素奇幻重制</title>
+  <title>AI Dungeon Simulator v0.8.0 · 命运开端</title>
   <link rel="stylesheet" href="style.css">
   <script src="core.js" defer></script>
   <script src="events.js" defer></script>
   <script src="living-world.js" defer></script>
+  <script src="progression.js" defer></script>
   <script src="character-card.js" defer></script>
   <script src="world.js" defer></script>
   <script src="assets.js" defer></script>
@@ -18,7 +19,7 @@
 </head>
 <body>
   <main class="app">
-    <header class="header"><div><p class="eyebrow">AI DUNGEON SIMULATOR / V0.7.0</p><h1>艾尔文边境<span class="header-seal">像素奇幻重制</span></h1><p class="subtitle">一张人物卡，一段无人操控的边境冒险。</p></div><div class="world-clock"><span>✦ 世界历 · 与播放速度独立</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
+    <header class="header"><div><p class="eyebrow">AI DUNGEON SIMULATOR / V0.8.0</p><h1>艾尔文边境<span class="header-seal">命运开端</span></h1><p class="subtitle">一张人物卡，一段无人操控的边境冒险。</p></div><div class="world-clock"><span>✦ 世界历 · 与播放速度独立</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
     <div class="toolbar" aria-label="模拟控制">
       <button id="toggle" class="primary" type="button">开始模拟</button>
       <select id="speed" aria-label="播放速度"><option value="slow">慢速 · 700 ms</option><option value="normal" selected>正常 · 250 ms</option><option value="fast">快速 · 60 ms</option></select>
@@ -39,16 +40,16 @@
       </section>
       <aside class="sidebar">
         <section class="panel character-panel" aria-label="D&D 风格人物卡"><div class="character-heading"><div class="portrait-window"><img id="portrait" src="assets/knight-portrait.png" width="114" height="114" alt="战士原型像素头像"></div><div class="identity"><span class="card-kicker">艾尔文边境 · 冒险者档案</span><h2 id="character-name">艾尔文</h2><span id="class-label">战士</span><button id="details" class="text-button" type="button">完整人物档案 ↗</button></div><div class="ac-shield"><span>AC</span><strong id="card-ac">15</strong></div></div>
-          <div class="card-rank"><span id="level-label">原型等级 1 · 暂无升级</span><button id="card-collapse" class="text-button" type="button" aria-expanded="true">折叠属性</button></div>
+          <div class="patron-card"><span id="patron-symbol" class="patron-symbol"></span><div><strong id="patron-name"></strong><p id="patron-oracle"></p></div></div><details class="faith-detail"><summary>神恩、代价与信条</summary><p id="patron-rule"></p></details><div class="growth-row"><span id="combat-level"></span><span id="xp-progress"></span></div><div class="faith-row"><span id="grace"></span><span id="skill-resource"></span></div><div class="card-rank"><span id="level-label">原型等级 1 · 暂无升级</span><button id="card-collapse" class="text-button" type="button" aria-expanded="true">折叠属性</button></div>
           <div id="ability-scores" class="ability-scores" aria-label="六维属性"></div>
           <div id="trait-summary" class="trait-summary"></div>
           <div class="health-heading"><span>生命值</span><strong id="hp"></strong></div><div class="health-track" role="progressbar" aria-label="生命值" aria-valuemin="0"><div id="hp-bar"></div></div>
           <div class="health-heading fatigue-heading"><span>疲劳</span><strong id="fatigue"></strong></div><div class="health-track" role="progressbar" aria-label="疲劳" aria-valuemin="0" aria-valuemax="100"><div id="fatigue-bar"></div></div>
           <div class="resources"><div><span><img class="item-icon" src="assets/coin.png" alt="">金币</span><strong id="gold"></strong></div><div><span><img class="item-icon" src="assets/potion.png" alt="">药水</span><strong id="potions"></strong></div><div><span><img class="item-icon" src="assets/dice.png" alt="">击杀</span><strong id="kills"></strong></div></div>
-          <div class="card-notes"><p><img class="item-icon" src="assets/book.png" alt=""><span id="card-goal"></span></p><p><img class="item-icon" src="assets/bag.png" alt=""><span id="card-gear"></span></p></div><p id="combat-stats" class="hint"></p>
+          <div class="card-notes"><p><img class="item-icon" src="assets/book.png" alt=""><span id="card-goal"></span></p><p><img class="item-icon" src="assets/bag.png" alt=""><span id="card-gear"></span></p></div><p id="combat-stats" class="hint"></p><div id="equipment-slots" class="equipment-slots"></div>
         </section>
         <section class="panel"><div class="panel-heading"><h2>目标与决策</h2><span>规则型 AI</span></div><div class="decision-body"><span id="goal" class="goal-label"></span><h3 id="intent"></h3><p id="reason"></p></div></section>
-        <section class="panel"><div class="panel-heading"><h2 id="event-heading">当前情景</h2><span id="event-kind">观察</span></div><p id="combat-info"></p><div id="enemy-health" hidden><div class="health-heading"><span>敌方 HP</span><strong id="enemy-hp"></strong></div><div class="health-track" role="progressbar" aria-label="敌方生命值" aria-valuemin="0"><div id="enemy-bar"></div></div><p id="enemy-stats" class="hint"></p></div></section>
+        <section class="panel combat-panel"><div class="panel-heading"><h2 id="event-heading">当前情景</h2><span id="event-kind">观察</span></div><p id="combat-info"></p><p id="battle-replay" class="battle-replay" aria-live="polite"></p><label class="effects-control"><input id="effects-input" type="checkbox" checked>显示战斗反馈</label><div id="enemy-health" hidden><div class="health-heading"><span>敌方 HP</span><strong id="enemy-hp"></strong></div><div class="health-track" role="progressbar" aria-label="敌方生命值" aria-valuemin="0"><div id="enemy-bar"></div></div><p id="enemy-stats" class="hint"></p></div></section>
         <details class="panel auxiliary-panel"><summary>背包与重要记忆</summary><div class="panel-heading"><h2>随身记录</h2><span id="memory-count"></span></div><p id="inventory" class="inventory"></p><ul id="memories" class="memories"></ul></details>
         <details class="panel auxiliary-panel"><summary>边境居民与委托</summary><div class="panel-heading"><h2>日程与委托</h2><span>日程 · 因果</span></div><ul id="npc-list" class="memories"></ul><ul id="quest-list" class="memories"></ul></details>
       </aside>
@@ -65,7 +66,7 @@
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-form"><p class="eyebrow">一段新的旅程</p><h2 id="create-title">创建你的冒险者</h2><p class="dialog-intro">设定性格与愿望，随后交由规则型 AI 自主冒险。五种倾向可以同时存在。</p>
       <div class="form-grid"><label>姓名<input id="name-input" name="name" maxlength="24" value="艾尔文" required></label><label>职业原型<select id="class-input" name="classId"><option value="warrior">战士</option><option value="rogue">游荡者</option><option value="mage">法师</option></select></label><label>初始目标<select id="goal-input" name="goal"><option value="explore">探索边境</option><option value="wealth">积累 100 金币</option><option value="survive">平安度过三天</option></select></label><label>随机种子<input id="seed-input" name="seed" maxlength="80" placeholder="相同配置与种子可复现"></label></div>
-      <p id="class-description" class="hint"></p><fieldset class="traits"><legend>性格权重 · 0～100</legend>
+      <p id="class-description" class="hint"></p><p id="patron-description" class="hint"></p><fieldset class="traits"><legend>性格权重 · 0～100</legend>
         <label for="courage">勇敢 <output id="courage-value">60</output><input id="courage" name="courage" type="range" min="0" max="100" value="60"></label>
         <label for="caution">谨慎 <output id="caution-value">55</output><input id="caution" name="caution" type="range" min="0" max="100" value="55"></label>
         <label for="greed">贪婪 <output id="greed-value">45</output><input id="greed" name="greed" type="range" min="0" max="100" value="45"></label>

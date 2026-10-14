@@ -156,7 +156,8 @@
       if (q.objective === 'combat') {
         const enemy = { ...D.SKELETON_STATS, hp: 14, maxHp: 14, id: 1, name: '盗匪哨兵', ...sim.character.position };
         sim.fieldCombat = new D.Encounters([enemy], () => sim.random.next(), sim.character);
-        sim.fieldCombat.battle = { target: enemy, turn: 'hero', round: 1 }; state.stage = 'combat'; sim.time(5);
+        sim.character.rpg.battle=null;
+      sim.fieldCombat.battle = { target: enemy, turn: 'hero', round: 1 }; state.stage = 'combat'; sim.time(5);
         sim.record('battle', q.title, '调查道路时遇见一名盗匪哨兵，进入真实回合战斗；胜负尚未确定。'); return true;
       }
     }

@@ -224,6 +224,7 @@ async function run() {
   // 合法受伤战斗夹具：确定性覆盖 HP 归零和停止，而非等待偶然死亡。
   const deathFixture = JSON.parse(JSON.stringify(battleSave));
   deathFixture.character.hp = 1; deathFixture.character.potions = 0;
+  if(deathFixture.character.rpg){deathFixture.character.rpg.grace=0;deathFixture.character.rpg.battle.guard=0;deathFixture.character.rpg.battle.counter=0;}
   deathFixture.dungeon.encounters.battle.turn = 'skeleton';
   for (let seed = 0; seed < 10000; seed++) {
     if (((Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296 > .95) { deathFixture.randomState = seed; break; }
@@ -288,6 +289,19 @@ async function run() {
     await create();await tick();assert.equal((await model()).status,'alive');
     await send('Network.setBlockedURLs',{urls:[]});await send('Page.reload');await waitReady();
     assert.equal(await evaluate('PixelAssets.ready'),'ready');
+  }
+  if(await evaluate('typeof FateRules!=="undefined"')) {
+    const baseline=await model();
+    for(const classId of ['warrior','rogue','mage']){
+      const facts=await evaluate(`(()=>{const s=new Adventure.Simulation({classId:'${classId}',seed:'world-browser-003'});let miracle=null,upgrade=null;for(let i=0;i<4000&&s.status==='alive';i++){s.step();if(!miracle&&s.character.rpg.miracles>0)miracle=s.toSave();if(!upgrade&&s.character.rpg.combatLevel>=2)upgrade=s.toSave();}return {miracle,upgrade,final:s.toSave()};})()`);
+      assert.ok(facts.miracle,classId+' must actually invoke a miracle');assert.ok(facts.upgrade);assert.equal(facts.final.character.rpg.combatLevel,5);
+      await loadSnapshot(facts.miracle);assert.ok(await evaluate("document.getElementById('patron-name').textContent.length>0"));
+      assert.equal(await evaluate(`document.getElementById('patron-name').textContent`),({warrior:'赤誓之神·瓦尔铎',rogue:'夜途之神·诺克斯',mage:'星织女神·艾蕾娅'})[classId]);
+      await screenshot('miracle-v08-'+classId+'.png');await loadSnapshot(facts.upgrade);await screenshot('upgrade-v08-'+classId+'.png');
+      await loadSnapshot(facts.final);assert.equal(await evaluate("document.querySelectorAll('#equipment-slots p').length"),3);
+      await click('details');assert.ok(await evaluate("document.getElementById('character-details').textContent.includes('神迹已发动')"));await evaluate("document.getElementById('details-dialog').close()");
+    }
+    await loadSnapshot(baseline);console.log('v0.8 浏览器实景通过：同种子三职业自然神迹/升级/换装、真实截图、绑定神明/资源/成长显示。');
   }
   // 再打开没有虚拟时钟的页面，检查真实播放与暂停。
   await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });

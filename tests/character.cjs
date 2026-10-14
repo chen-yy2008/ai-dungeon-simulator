@@ -5,7 +5,7 @@ const { Simulation, Agent, createCharacter } = require('../world.js');
 const { EVENTS } = require('../events.js');
 const basic = Card.fromConfig();
 assert.deepEqual(Card.parse(JSON.stringify(basic)), basic);
-for (const mutate of [c => c.version = 2, c => c.hp = 999, c => c.gold = 1000,
+for (const mutate of [c => c.version = 999, c => c.hp = 999, c => c.gold = 1000,
   c => c.abilities.STR = 21, c => c.traits.greed = -1, c => c.level = 21,
   c => c.behavior.altruism = '100', c => c.values = ['未知价值观'],
   c => c.name = '', c => c.background = 'x'.repeat(1001), c => c.weaknesses = ['飞天'],
@@ -14,7 +14,7 @@ for (const mutate of [c => c.version = 2, c => c.hp = 999, c => c.gold = 1000,
 }
 assert.throws(() => Card.parse('{bad json}'));
 assert.throws(() => Card.parse(' '.repeat(65537)));
-assert.throws(() => Card.parse(JSON.stringify(basic).replace('"version":1', '"version":1,"__proto__":{"polluted":true}')));
+assert.throws(() => Card.parse(JSON.stringify(basic).replace('"version":'+basic.version, '"version":'+basic.version+',"__proto__":{"polluted":true}')));
 assert.equal({}.polluted, undefined);
 const imported = structuredClone(basic); imported.name = '远行者'; imported.level = 20; imported.abilities.STR = 20;
 imported.identity = '边境学者'; imported.background = '<script>globalThis.pwned=true</script>';

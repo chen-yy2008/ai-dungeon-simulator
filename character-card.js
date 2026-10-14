@@ -1,6 +1,7 @@
 /* 纯角色设定数据接口：JSON 只描述角色，不接受运行资源或执行代码。 */
 (function (root) {
   'use strict';
+  const F = typeof module !== 'undefined' && module.exports ? require('./progression.js') : root.FateRules;
   const ABILITIES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
   const TRAITS = ['courage', 'caution', 'greed', 'kindness', 'curiosity'];
   const BEHAVIOR = ['riskTolerance', 'altruism', 'discipline'];
@@ -27,11 +28,12 @@
     return result;
   }
   function normalize(data) {
-    object(data, KEYS, '模型');
-    if (data.schema !== 'ai-dungeon-character' || data.version !== 1) fail('不支持此格式版本；请使用 schema=ai-dungeon-character、version=1');
+    object(data, data?.version === 2 ? [...KEYS,'patronId'] : KEYS, '模型');
+    if (data.schema !== 'ai-dungeon-character' || ![1,2].includes(data.version)) fail('不支持此格式版本；请使用 schema=ai-dungeon-character、version=1 或 2');
     if (!Object.hasOwn(DEFAULTS, data.classId) || !['explore', 'wealth', 'survive'].includes(data.goal)) fail('职业或目标无效');
+    if(data.version===2&&data.patronId!==F.PATRONS[data.classId].id) fail('神明必须与职业绑定');
     object(data.abilities, ABILITIES, '六维'); object(data.traits, TRAITS, '性格'); object(data.behavior, BEHAVIOR, '行为');
-    return { schema: data.schema, version: 1, name: string(data.name, 24, '姓名', true), classId: data.classId,
+    return { schema: data.schema, version: 2, patronId: F.PATRONS[data.classId].id, name: string(data.name, 24, '姓名', true), classId: data.classId,
       identity: string(data.identity, 80, '身份'), background: string(data.background, 1000, '背景'), level: number(data.level, 1, 20, '等级'),
       abilities: Object.fromEntries(ABILITIES.map(k => [k, number(data.abilities[k], 3, 20, k)])),
       traits: Object.fromEntries(TRAITS.map(k => [k, number(data.traits[k], 0, 100, k)])),

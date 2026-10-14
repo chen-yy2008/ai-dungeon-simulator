@@ -4,6 +4,7 @@
   const E = typeof module !== 'undefined' && module.exports ? require('./events.js') : root.AdventureEvents;
   const L = typeof module !== 'undefined' && module.exports ? require('./living-world.js') : root.LivingWorld;
   const C = typeof module !== 'undefined' && module.exports ? require('./character-card.js') : root.CharacterCard;
+  const F = typeof module !== 'undefined' && module.exports ? require('./progression.js') : root.FateRules;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const copy = value => JSON.parse(JSON.stringify(value));
   const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -33,13 +34,14 @@
   function createCharacter(config = {}) {
     const profile = C.fromConfig(config), { classId, traits } = profile;
     const stats = CLASSES[classId];
-    return { ...stats, name: profile.name, classId, profile,
+    const character = { ...stats, name: profile.name, classId, profile,
       abilities: copy(profile.abilities), level: profile.level,
       traits, goal: profile.goal, hp: stats.maxHp,
       gold: 24, potions: 2, fatigue: 0, kills: 0, moves: 0,
       position: { ...TOWN, region: 'town' }, knowledge: ['town', 'forest'], memories: profile.importantMemories.map((note, i) => ({ id: 'background-card-' + i, note: '角色背景：' + note, time: 480, count: 1 })),
       inventory: [{ id: 'weapon', name: stats.weapon, count: 1, value: 0 }],
       intent: '准备出发', reason: '先了解道路、整理物资，再离开安全的小镇。' };
+    F.install(character); return character;
   }
 
   function makeRoads() {
@@ -131,9 +133,9 @@
           (character.profile?.values.includes('责任') && ['help', 'potion', 'guide', 'return'].includes(action.id) ? 8 : 0) +
           (character.profile?.values.includes('自由') && ['leave', 'ignore', 'evade'].includes(action.id) ? 6 : 0);
         const bonus = action.check ? character.exploreBonus * 1.5 : 0;
-        return { action, score: action.base + traitScore + valueScore + bonus - risk +
+        return { action, score: action.base + traitScore + valueScore + bonus - risk + (character.classId==='warrior'?(action.traits.kindness||0)*.12:character.classId==='mage'?(action.traits.curiosity||0)*.15:(action.traits.curiosity||0)*.1) +
           (character.goal === 'wealth' ? (action.traits.greed || 0) * .25 : 0),
-          reason: `结合性格、价值观、行为倾向、${character.goal === 'wealth' ? '财富目标' : '当前目标'}、职业调查能力和当前风险，选择「${action.label}」。` };
+          reason: `结合性格、守护神信条、价值观、行为倾向、${character.goal === 'wealth' ? '财富目标' : '当前目标'}、职业调查能力和当前风险，选择「${action.label}」。` };
       }), random);
     }
   }
@@ -152,13 +154,14 @@
     get context() {
       const c = this.character;
       return { region: c.position.region, flags: this.world.flags, done: this.world.eventDone, time: this.world.minutes,
-        gold: c.gold, potions: c.potions, exploreBonus: c.exploreBonus,
-        npcAvailable: Object.fromEntries(Object.values(this.world.npcs).map(n => [n.id, n.available && n.location.region === c.position.region])) };
+        gold: c.gold, potions: c.potions, exploreBonus: c.exploreBonus + (c.classId==='mage'&&['stele','altar','hidden_room'].includes(this.pending?.id)?1:0),
+        npcAvailable: Object.fromEntries(Object.values(this.world.npcs).map(n => [n.id, (n.available || this.pending?.npcLock===n.id) && n.location.region === c.position.region])) };
     }
     record(type, title, text, story = text, facts = {}) {
       const world = this.world;
       world.history.push({ id: ++world.recordId, time: world.minutes, region: this.character.position.region, type, title, text, story, facts: copy(facts) });
       if (world.history.length > 2000) { world.history.shift(); world.archived++; }
+      F.onFact(this,type,facts,title);
     }
     remember(id, note) {
       const memory = this.character.memories.find(m => m.id === id);
@@ -180,7 +183,7 @@
     potion() {
       const c = this.character;
       if (!c.potions || c.hp >= c.maxHp) return false;
-      const healed = Math.min(12, c.maxHp - c.hp); c.potions--; c.hp += healed; this.time(5);
+      const healed = Math.min(12 + F.bonuses(c).heal, c.maxHp - c.hp); c.potions--; c.hp += healed; this.time(5);
       this.record('heal', '使用治疗药水', `消耗 1 瓶药水，恢复 ${healed} HP，现为 ${c.hp}/${c.maxHp}。`,
         `${c.name}饮下药水，伤口逐渐闭合。`, { healed, potions: c.potions, hp: c.hp });
       return true;
@@ -225,7 +228,7 @@
     }
     startEvent(definition, chest = null) {
       if (!definition || !this.events.eligible(definition, this.context)) return false;
-      this.pending = { id: definition.id, chest: chest?.event || null };
+      this.pending = { id: definition.id, chest: chest?.event || null, ...(definition.id==='merchant_return'?{npcLock:'merchant',startedAt:this.world.minutes}:{}) };
       L.legacyStarted(this, definition.id);
       this.time(5); this.intention(`处理：${definition.title}`, '先观察事件，再依据性格、资源和风险选择行动。');
       this.record('event', definition.title, definition.description, `${this.character.name}遇见了这样的情景：${definition.description}`, { eventId: definition.id });
@@ -234,6 +237,7 @@
     resolveEvent() {
       const definition = E.EVENTS.find(e => e.id === this.pending.id);
       const c = this.character;
+      if(definition.id==='merchant_return'&&!this.context.npcAvailable.merchant){this.pending=null;this.record('interrupted','回访推迟','商人已离开接待位置，保留事件结果等待之后再回访。');return;}
       const decision = this.agent.eventAction(definition, this.events.available(definition, this.context), c, () => this.random.next());
       const result = this.events.resolve(definition, decision.action, this.context, () => this.random.next());
       const before = { hp: c.hp, gold: c.gold, potions: c.potions, fatigue: c.fatigue };
@@ -264,7 +268,7 @@
       if (fx.combat) {
         const bandit = { ...D.SKELETON_STATS, hp: 12, maxHp: 12, id: 1, name: '盗匪', ...c.position };
         this.fieldCombat = new D.Encounters([bandit], () => this.random.next(), c);
-        this.fieldCombat.battle = { target: bandit, round: 1, turn: 'hero' };
+        this.fieldCombat.battle = { target: bandit, round: 1, turn: 'hero' }; F.beginBattle(c);
         this.record('battle', '与盗匪交战', '选择抵抗后，冒险者与已遇见的盗匪开始交替攻击。');
       }
     }
@@ -273,19 +277,22 @@
       if (d.ignoredId && distance(d.explorer.position, d.encounters.monsters.find(m => m.id === d.ignoredId)) > 1) d.ignoredId = null;
       const target = d.encounters.begin(d.explorer, d.ignoredId);
       if (!target) return false;
+      F.beginBattle(this.character);
       this.time(1); this.intention(`与骷髅 #${target.id}交战`, '发现相邻骷髅，停止移动，按规则交替攻击。');
       this.record('battle', '遭遇骷髅', `相邻的骷髅 #${target.id}进入战斗，冒险者先手。`); return true;
     }
     combatStep() {
       const combat = this.combat, c = this.character;
+      if(!c.rpg.battle)F.beginBattle(c);
+      let choice={};
       if (combat.battle.turn === 'hero') {
         const decision = this.agent.decide({ character: c }, () => this.random.next());
         if (decision.action === 'potion') { this.intention('战斗中治疗', decision.reason); this.potion(); combat.battle.turn = 'skeleton'; return; }
-        if (decision.action === 'retreat') {
-          const roll = this.random.integer(1, 20), bonus = c.escapeBonus + (this.world.flags.safePassage ? 1 : 0);
-          const success = roll + bonus >= 12;
+        if (decision.action === 'retreat' || c.classId==='rogue'&&c.fatigue>=65&&c.rpg.stamina>=2) {
+          const divine=F.escapeBonus(this), roll = this.random.integer(1, 20), bonus = c.escapeBonus + (this.world.flags.safePassage ? 1 : 0) + divine.bonus;
+          const success = divine.automatic || roll + bonus >= 12;
           this.time(5, 2); this.intention('尝试脱离战斗', decision.reason);
-          this.record('escape', '撤退检定', `d20(${roll}) + ${bonus} = ${roll + bonus} / DC 12：${success ? '脱离成功' : '脱离失败，轮到敌人攻击'}。`, undefined, { roll, bonus, success });
+          this.record('escape', '撤退检定', `${divine.automatic?'影步神迹确保脱离；':''}d20(${roll}) + ${bonus} = ${roll + bonus} / DC 12：${success ? '脱离成功' : '脱离失败，轮到敌人攻击'}。`, undefined, { roll, bonus, success });
           if (success) {
             this.remember('retreated', '曾因生命或疲劳风险主动撤退');
             if (this.phase === 'dungeon') { this.dungeon.ignoredId = combat.battle.target.id; this.dungeon.retreating = true; this.dungeon.explorer.path = []; }
@@ -294,13 +301,14 @@
           } else combat.battle.turn = 'skeleton';
           return;
         }
+        choice=F.combatChoice(this); if(choice.consumed)return;
       }
-      const result = combat.advance(), target = result.target;
+      const result = combat.advance((a,d,r)=>F.resolveAttack(this,choice,a,d,r)), target = result.target;
       const attacker = result.turn === 'hero' ? c : target, defender = result.turn === 'hero' ? target : c;
       const name = target.name || `骷髅 #${target.id}`;
       const outcome = result.roll === 1 ? '自然 1，失手' : result.critical ? '自然 20，重击' : result.hit ? '命中' : '失手';
-      const text = `${result.turn === 'hero' ? c.name + ' → ' + name : name + ' → ' + c.name}：d20(${result.roll}) + ${attacker.attackBonus} = ${result.total} / AC ${defender.ac}，${outcome}。` +
-        (result.hit ? `${result.dice.length}d${attacker.damageSides}+${attacker.damageBonus}（${result.dice.join('+')}+${attacker.damageBonus}）造成 ${result.damage} 伤害，目标 HP ${result.hp}/${defender.maxHp}。` : '没有造成伤害。');
+      const text = result.description || `${result.turn === 'hero' ? c.name + ' → ' + name : name + ' → ' + c.name}：d20(${result.roll}) + ${result.attackBonus ?? attacker.attackBonus} = ${result.total} / AC ${defender.ac}，${outcome}。` +
+        (result.hit ? `${result.dice.length}d${attacker.damageSides}+${attacker.damageBonus}（${result.dice.join('+')}+${attacker.damageBonus}）造成 ${result.damage} 伤害${result.reduced?`（实际减免${result.reduced}）`:""}，目标 HP ${result.hp}/${defender.maxHp}。` : '没有造成伤害。');
       this.time(1, .5); this.record('attack', `战斗 · 第 ${result.round} 回合`, text, text, { ...result, target: name });
       if (result.turn === 'skeleton' && result.hit) this.remember('injured', '受到敌人攻击，今后更重视退路');
       if (result.victory) {
@@ -313,6 +321,7 @@
       }
     }
     dungeonStep() {
+      if(!this.dungeon.encounters.battle&&F.maintenance(this))return;
       const d = this.dungeon, c = this.character;
       const decision = this.agent.decide({ character: c }, () => this.random.next());
       if (decision.action === 'potion') { this.intention('恢复生命', decision.reason); this.potion(); return; }
@@ -348,6 +357,7 @@
       }
     }
     townStep() {
+      if(F.maintenance(this))return;
       const c = this.character;
       const followup = E.EVENTS.find(e => e.id === 'merchant_return');
       if (this.events.eligible(followup, this.context)) { this.startEvent(followup); return; }
@@ -464,7 +474,8 @@
       // v0.3 additive migration: retain combat statistics, RNG and world facts.
       sim.character.abilities = sim.character.abilities || characterAbilities(sim.character.classId);
       sim.character.level = sim.character.level || 1;
-      sim.character.profile = sim.character.profile || C.fromConfig(sim.character);
+      sim.character.profile = sim.character.profile ? C.normalize(sim.character.profile) : C.fromConfig(sim.character);
+      F.install(sim.character);
       for (const key of ['phase', 'status', 'actions', 'mission', 'destination', 'pending', 'lastRest']) sim[key] = save[key];
       const restoreCombat = data => {
         if (!data) return null;
@@ -489,7 +500,7 @@
     const grid = (g, size, values) => Array.isArray(g) && g.length === size && g.every(row => Array.isArray(row) && row.length === size && row.every(v => values.includes(v)));
     if (!save || save.version !== 3 || !save.config || !save.world || !save.character || !['world', 'dungeon'].includes(save.phase) || !['alive', 'dead'].includes(save.status)) fail();
     const c = save.character, w = save.world;
-    if (!L.validate(w)) fail();
+    if (!L.validate(w) || !F.valid(c) || c.rpg&&c.rpg.lastPrayer>w.minutes) fail();
     if (c.abilities && !ABILITIES.every(key => Number.isInteger(c.abilities[key]) && number(c.abilities[key], 3, 20))) fail();
     if (c.level !== undefined && (!Number.isInteger(c.level) || !number(c.level, 1, 20))) fail();
     if (c.profile) {
@@ -515,6 +526,7 @@
       w.history.some((r, i) => i && (r.time < w.history[i - 1].time || r.id <= w.history[i - 1].id))) fail();
     if (save.status === 'dead' && c.hp !== 0 || save.status === 'alive' && c.hp === 0) fail();
     if (w.flags.merchantChoice && (!['help', 'ignore'].includes(w.flags.merchantChoice) || !number(w.flags.merchantDue, 0))) fail();
+    if(save.pending?.npcLock&&(save.pending.id!=='merchant_return'||save.pending.npcLock!=='merchant'||c.position.region!=='town'||!number(save.pending.startedAt,0,w.minutes)))fail();
     if (save.pending && (!E.EVENTS.some(e => e.id === save.pending.id) || w.eventDone[save.pending.id])) fail();
     const combat = data => {
       if (!data || !Array.isArray(data.monsters) || !Array.isArray(data.discovered) || !number(data.kills, 0)) fail();
