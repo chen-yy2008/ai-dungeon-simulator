@@ -8,14 +8,15 @@
   const cards = globalThis.CharacterCard, editor = new globalThis.CardEditor(cards, $);
   let renderedAbilities = '', renderedClass = '', tutorial = null;
   const STORAGE_KEY = 'ai-dungeon-simulator:v0.3';
-  const delays = { slow: 700, normal: 250, fast: 60 };
+  const delays = { slow: 2200, normal: 1400, story:600, fast: 60 };
+  const experience=globalThis.AdventureExperience; let lastEnding='';
   const regionNames = { town: '边境小镇', forest: '北部森林', ruins: '古代遗迹' };
   const freshSeed = () => String(Date.now());
   let sim = new A.Simulation({ seed: freshSeed() }), timer = null, running = false, started = false;
   let renderedRecord = -1, renderedPhase = '', historyShown = 0, historySnapshot = [], storageAvailable = true;
   const view = new globalThis.MapView($('dungeon'));
   const timestamp = minute => `第 ${Math.floor(minute / 1440) + 1} 天 ${String(Math.floor(minute % 1440 / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
-  const notify = message => text('notice', message);
+  const notify = message => {text('notice',message);text('home-notice',message);};
   function health(id, bar, current, max) {
     text(id, `${current} / ${max}`); $(bar).style.width = `${current / max * 100}%`;
     $(bar).parentElement.setAttribute('aria-valuenow', current); $(bar).parentElement.setAttribute('aria-valuemax', max);
@@ -105,6 +106,7 @@
     $('toggle').disabled = sim.status !== 'alive';
 
     view.effects=$('effects-input').checked;view.draw(sim, running); renderLogs(force);
+    if(sim.status!=='alive'&&lastEnding!==sim.config.seed+':'+sim.actions){lastEnding=sim.config.seed+':'+sim.actions;showEnding();}
   }
   function cancelTimer() { if (timer !== null) clearTimeout(timer); timer = null; }
   function schedule() { cancelTimer(); if (running && sim.status === 'alive') timer = setTimeout(tick, delays[$('speed').value]); }
@@ -123,6 +125,8 @@
   }
   function replaceSimulation(next, autoStart = false) {
     cancelTimer(); sim = next; running = autoStart; started = autoStart;
+    document.body.dataset.mobilePanel='map';document.querySelectorAll('[data-mobile-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mobileView==='map')));
+    lastEnding=''; if($('ending-dialog').open)$('ending-dialog').close();
     renderedRecord = -1; renderedPhase = ''; render(true); schedule();
   }
   $('toggle').addEventListener('click', () => {
@@ -150,9 +154,10 @@
     } catch (error) { notify(`无法读取：${error.message}`); }
   });
   function classDescription() {
-    const c = A.CLASSES[$('class-input').value];
-    text('patron-description',F.PATRONS[$('class-input').value].name+' · '+F.PATRONS[$('class-input').value].oracle+' '+F.PATRONS[$('class-input').value].creed+' '+F.PATRONS[$('class-input').value].blessing+' 技能：'+F.SKILLS[$('class-input').value].join('、')+'。');
-    text('class-description', `${c.name}：HP ${c.maxHp} · AC ${c.ac} · 攻击 +${c.attackBonus} · 1d${c.damageSides}+${c.damageBonus} · 调查 +${c.exploreBonus} · 脱离 +${c.escapeBonus}。职业技能由AI按资源与风险自行使用，选职业即绑定神明。`);
+    const classId=$('class-input').value,c = A.CLASSES[classId];
+    $('creation-portrait').src='assets/'+PixelAssets.heroes[classId]+'-portrait.png';
+    text('patron-description',F.PATRONS[classId].name+' · '+F.PATRONS[classId].oracle+' 技能：'+F.SKILLS[classId].join('、')+'。');
+    text('class-description',c.name+' · HP '+c.maxHp+' / AC '+c.ac+' / 调查 +'+c.exploreBonus+'；神眷与有限职业资源会实际改变冒险。');
   }
   $('class-input').addEventListener('change', () => { classDescription(); editor.defaults($('class-input').value); });
   $('class-input').addEventListener('card-import', classDescription);
@@ -161,7 +166,7 @@
     event.preventDefault();
     try {
       const config = { card: editor.read(), seed: $('seed-input').value.trim() || freshSeed(), endless:$('endless-input').checked };
-      replaceSimulation(new A.Simulation(config), true); $('create-dialog').close(); tutorial?.update(sim);
+      showGame(); replaceSimulation(new A.Simulation(config), true); $('create-dialog').close(); tutorial?.update(sim);
     } catch (error) { text('card-notice', error.message); document.querySelector('.card-editor').open = true; return; }
     notify('角色已创建，AI 已接管行动。相同种子和角色配置会产生相同逻辑结果。');
   });
@@ -212,9 +217,40 @@
     if (button.dataset.mobileView === 'story') $('chronicle').open = true;
   }));
   $('biography').addEventListener('click',()=>{text('biography-text',Chronicler.biography(sim));$('biography-dialog').showModal();});
-  tutorial=new RavenTutorial({get:$,active:()=>started,pause:()=>{const before=running;running=false;cancelTimer();view.draw(sim,false);return before;},resume:before=>{if(before&&sim.status==='alive'){running=true;schedule();}render();},reveal:selector=>{const el=document.querySelector(selector);document.querySelectorAll('.tutorial-focus').forEach(x=>x.classList.remove('tutorial-focus'));if(el)el.classList.add('tutorial-focus');}});
+  tutorial=new RavenTutorial({get:$,active:()=>started,openCreation:()=>{showGame();if(!$('create-dialog').open)$('create-dialog').showModal();},pause:()=>{const before=running;running=false;cancelTimer();view.draw(sim,false);return before;},resume:before=>{if(before&&sim.status==='alive'&&!$('create-dialog').open){running=true;schedule();}render();},reveal:selector=>{const el=document.querySelector(selector);document.querySelectorAll('.tutorial-focus').forEach(x=>x.classList.remove('tutorial-focus'));if(el)el.classList.add('tutorial-focus');}});
+
+  function showGame(){ $('welcome-screen').hidden=true;document.querySelector('.app').hidden=false;window.scrollTo(0,0);render(true); }
+  function showHome(){running=false;cancelTimer();view.draw(sim,false);if(started)save(false);document.querySelectorAll('dialog[open]').forEach(d=>d.close());document.querySelector('.app').hidden=true;$('welcome-screen').hidden=false;try{$('home-continue').disabled=!localStorage.getItem(STORAGE_KEY);}catch{$('home-continue').disabled=true;}tutorial?.update(sim);window.scrollTo(0,0);}
+  function startPreset(p,demo=false){
+    editor.fill(cards.fromConfig(p));classDescription();$('seed-input').value=p.seed;$('endless-input').checked=false;
+    showGame();replaceSimulation(new A.Simulation({card:editor.read(),seed:p.seed,endless:false}),true);
+    $('speed').value=demo?'story':'normal';$('create-dialog').close();tutorial?.characterStarted();tutorial?.update(sim);schedule();
+    notify(demo?'示例采用真实规则与固定种子，纪行速度约10分钟，可随时暂停或加速。':'预设角色已出发；无需操作移动或攻击。');
+  }
+  function showEnding(){
+    const c=sim.character,s=sim.world.saga; $('ending-dialog').dataset.ending=s.ending?.code||'ongoing';
+    $('ending-portrait').src='assets/'+PixelAssets.heroes[c.classId]+'-portrait.png';text('ending-title',s.ending?.title||'旅途仍在继续');text('ending-subtitle',c.name+' · '+A.CLASSES[c.classId].name+' · '+F.PATRONS[c.classId].name);
+    const rows=[['真实战绩','战斗等级 '+c.rpg.combatLevel+' / XP '+c.rpg.xp+' / 击杀 '+c.kills+' / 移动 '+c.moves+'步 / 神迹 '+c.rpg.miracles+'次'],['阶段与时间',s.ending?'于'+timestamp(s.ending.time)+'收束，地图与记录仍可浏览。':'尚未结束，现在导出的战报如实标为旅途中。'],['装备与技能',Object.values(c.rpg.equipment).filter(Boolean).map(id=>F.item(id).name).join('、')+'；'+Object.entries(c.rpg.skills).map(([k,v])=>k+' '+v+'次').join('、')],['信赖与分歧',Object.values(sim.world.npcs).map(n=>n.name+' '+n.relationship+(n.relationship>=10?'（信赖）':n.relationship<=-10?'（冷淡）':'（普通）')).join(' · ')],...Object.entries(SagaRules.TITLES).map(([id,title])=>[title,sim.world.saga[id].stage==='complete'?SagaRules.BRANCH_NAMES[sim.world.saga[id].branch]:'尚未结算，不计为成功']),...c.memories.filter(m=>m.id.startsWith('saga-')).map(m=>['关键回忆',m.note])];
+    $('ending-record').replaceChildren(...rows.map(([label,value])=>{const p=document.createElement('p'),b=document.createElement('strong');b.textContent=label+' · ';p.append(b,document.createTextNode(value));return p;}));
+    text('share-notice','分享只含角色与实际冒险记录，不含账号或浏览器数据。');$('share-fallback').hidden=true;if(!$('ending-dialog').open)$('ending-dialog').showModal();$('ending-dialog').scrollTop=0;$('ending-title').focus({preventScroll:true});tutorial?.update(sim);
+  }
+  $('home-start').addEventListener('click',()=>{showGame();$('create-dialog').showModal();tutorial?.update(sim);});
+  $('home-continue').addEventListener('click',()=>{try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)throw Error('尚无本地存档');A.Simulation.fromSave(JSON.parse(raw));$('load').click();showGame();}catch(e){notify('无法继续：'+e.message);}});
+  $('home-demo').addEventListener('click',()=>startPreset(experience.PRESETS[2],true));
+  $('home-tutorial').addEventListener('click',()=>tutorial.replay());
+  $('go-home').addEventListener('click',showHome);
+  $('show-ending').addEventListener('click',()=>{running=false;cancelTimer();render();showEnding();});
+  $('ending-observe').addEventListener('click',()=>{$('ending-dialog').close();tutorial?.update(sim);});
+  $('ending-restart').addEventListener('click',showHome);
+  $('ending-export-card').addEventListener('click',()=>editor.download(cards.exportCharacter(sim.character)));
+  $('copy-report').addEventListener('click',async()=>{const content=experience.summary(sim);try{if(!navigator.clipboard)throw Error('clipboard unavailable');await navigator.clipboard.writeText(content);text('share-notice','战报已复制，可直接分享给朋友。');}catch{$('share-fallback').hidden=false;$('share-fallback').value=content;$('share-fallback').focus();$('share-fallback').select();let copied=false;try{copied=document.execCommand('copy');}catch{}text('share-notice',copied?'战报已复制；下方也保留可手动复制文本。':'浏览器限制自动复制，已选中下方战报，请手动复制。');}});
+  $('download-story').addEventListener('click',()=>{const blob=new Blob([experience.summary(sim)+'\n\n'+experience.biography(sim)],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='border-chronicle.md';document.body.append(a);a.click();a.remove();requestAnimationFrame(()=>URL.revokeObjectURL(url));text('share-notice','已请求下载完整故事Markdown；其中每个关键节点都保留事实编号。');});
+  $('home-presets').replaceChildren(...experience.PRESETS.map(p=>{const item=document.createElement('article'),img=document.createElement('img'),h=document.createElement('h3'),body=document.createElement('p'),god=document.createElement('small'),button=document.createElement('button');item.className='preset-card';img.src='assets/'+PixelAssets.heroes[p.classId]+'-portrait.png';img.alt=A.CLASSES[p.classId].name+'像素肖像';img.width=76;img.height=76;h.textContent=p.name;body.textContent=p.description;god.textContent=A.CLASSES[p.classId].name+' · '+F.PATRONS[p.classId].name;button.textContent='观看'+p.name;button.dataset.preset=p.id;button.addEventListener('click',()=>startPreset(p));item.append(img,h,god,body,button);return item;}));
+  try{$('home-continue').disabled=!localStorage.getItem(STORAGE_KEY);}catch{$('home-continue').disabled=true;}
+  const landingView=new MapView($('landing-map'));PixelAssets.ready.then(()=>landingView.draw(new A.Simulation({seed:'landing-scene'}),false));
+
   const assetStatus = () => { const p = globalThis.PixelAssets; text('asset-status', p.status === 'ready' ? '本地 CC0 像素图集已就绪' : '部分图集加载失败，已使用简化后备画面。可重新打开页面重试。'); $('asset-status').classList.toggle('asset-warning', p.status !== 'ready'); render(); };
   globalThis.PixelAssets.ready.then(assetStatus);
   window.addEventListener('pagehide', () => { if (started && storageAvailable) save(false); });
-  $('seed-input').value = sim.config.seed; classDescription(); editor.defaults(sim.character.classId); render(true); $('create-dialog').showModal(); tutorial?.update(sim);
+  $('seed-input').value = sim.config.seed; classDescription(); editor.defaults(sim.character.classId); render(true); tutorial?.update(sim);
 })();

@@ -1,5 +1,5 @@
 {
-  "version": "0.9.0",
+  "version": "1.0.0",
   "branch": "main",
   "files": [
     ".gitignore",
@@ -115,7 +115,24 @@
     "docs/v09/raven-step-4-390.png",
     "docs/v09/raven-step-5-1240.png",
     "docs/v09/biography-v09.png",
-    "docs/v09/ending-v09.png"
+    "docs/v09/ending-v09.png",
+    "experience.js",
+    "tests/experience.cjs",
+    "AI Dungeon Simulator v1.1 玩家体验增强版任务书.md",
+    "tests/fixtures/historical-03.json",
+    "tests/fixtures/historical-06.json",
+    "tests/fixtures/README.md",
+    "docs/releases/v1.0-report.md",
+    "docs/v10/acceptance.json",
+    "docs/v10/home-desktop.png",
+    "docs/v10/home-mobile.png",
+    "docs/v10/world.png",
+    "docs/v10/dungeon.png",
+    "docs/v10/character-mobile.png",
+    "docs/v10/tutorial-mobile.png",
+    "docs/v10/ending-desktop.png",
+    "docs/v10/ending-mobile.png",
+    "docs/v10/share-mobile.png"
   ],
   "runtimeAssets": [
     "assets/field.png",

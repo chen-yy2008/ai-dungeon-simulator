@@ -23,7 +23,8 @@
   update(sim){
    if(this.sim&&this.sim!==sim)this.saved=false;
    this.sim=sim;const panel=this.o.get('raven'),create=this.o.get('create-dialog');
-   if(create.open){if(panel.parentNode!==create)create.prepend(panel);}else if(panel.parentNode===create){document.querySelector('.layout').before(panel);}
+   const home=this.o.get('welcome-screen'),end=this.o.get('ending-dialog');
+   if(create.open){if(panel.parentNode!==create)create.prepend(panel);}else if(end?.open){if(panel.parentNode!==end)end.prepend(panel);}else if(home&&!home.hidden){this.o.get('home-guide-slot').append(panel);}else if(panel.parentNode!==document.querySelector('.app')){document.querySelector('.layout').before(panel);}
    panel.hidden=this.state.done||this.state.skipped;
    if(panel.hidden)return;
    const ready=this.eligible(sim),[message,label,selector]=this.notes(sim)[this.state.step];
@@ -31,7 +32,8 @@
    this.o.get('tutorial-next').textContent=label;this.o.get('tutorial-next').disabled=!ready;
    if(ready&&this.presented!==this.state.step){this.presented=this.state.step;this.resumeBefore=this.o.pause();if(selector)this.o.reveal(selector);}
   }
-  next(){if(!this.sim||!this.eligible(this.sim))return;const before=this.resumeBefore;this.resumeBefore=false;if(this.state.step===6)this.state.done=true;else this.state.step++;this.presented=-1;this.store();this.o.resume(before);}
+  characterStarted(){if(!this.state.done&&!this.state.skipped&&this.state.step<2){this.state.step=2;this.presented=-1;this.store();}}
+  next(){if(!this.sim||!this.eligible(this.sim))return;const before=this.resumeBefore;this.resumeBefore=false;if(this.state.step===6)this.state.done=true;else this.state.step++;this.presented=-1;this.store();if(this.state.step===1)this.o.openCreation?.();this.o.resume(before);}
   skip(){const before=this.resumeBefore;this.resumeBefore=false;this.state.skipped=true;this.store();this.o.resume(before);}
   replay(){this.state={version:1,step:0,done:false,skipped:false};this.presented=-1;this.store();this.o.resume(false);}
   noteSave(){this.saved=true;}

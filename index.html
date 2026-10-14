@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Dungeon Simulator v0.9.0 · 命运编织</title>
+  <title>AI Dungeon Simulator v1.0.0 · 边境纪行</title>
   <link rel="stylesheet" href="style.css">
   <script src="core.js" defer></script>
   <script src="events.js" defer></script>
@@ -17,18 +17,20 @@
   <script src="legacy-view.js" defer></script>
   <script src="view.js" defer></script>
   <script src="card-editor.js" defer></script>
+  <script src="experience.js" defer></script>
   <script src="tutorial.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
-  <main class="app">
-    <header class="header"><div><p class="eyebrow">AI DUNGEON SIMULATOR / V0.9.0</p><h1>艾尔文边境<span class="header-seal">命运编织</span></h1><p class="subtitle">一张人物卡，一段无人操控的边境冒险。</p></div><div class="world-clock"><span>✦ 世界历 · 与播放速度独立</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
+  <section id="welcome-screen" class="welcome-screen" aria-labelledby="welcome-title"><div class="welcome-top"><span>AI DUNGEON SIMULATOR · v1.0.0</span><span>原创奇幻 · 自动冒险 · 无需注册</span></div><div class="welcome-hero"><div class="welcome-copy"><p class="eyebrow">一人，一场冒险，一部真实纪行</p><h1 id="welcome-title">艾尔文边境</h1><p class="welcome-line">不替英雄挥剑，<br>只见证命运如何发生。</p><p>选择职业、神明与性格，随后放手。角色会自行旅行、结识居民、探索遗迹和战斗，世界将记住每一次选择。</p><strong class="observer-note">你是观察者 · 不需要操作移动或攻击</strong><div class="welcome-actions"><button id="home-start" class="primary" type="button">开始新冒险</button><button id="home-continue" type="button">继续旅程</button><button id="home-demo" type="button">观看示例 · 约10分钟</button><button id="home-tutorial" type="button">新手教程</button></div><details class="how-to"><summary>玩法简介 · 30秒了解</summary><p>角色根据性格、生命、疲劳、目标和已知信息行动。你可以暂停、倍速、翻阅人物卡和纪事。金币、装备、信任和三条因果主线会改变结果；死亡或阶段结局会留下可分享的传记。正常播放约20分钟，也可快速观看。</p></details><p id="home-notice" role="status"></p></div><div class="landing-art"><canvas id="landing-map" width="672" height="672" aria-label="艾尔文边境的像素场景">本地像素世界场景</canvas><span>小镇的灯火仍亮着，北方的路已经展开。</span></div></div><section class="preset-section"><h2>挑一位旅人，立即出发</h2><p>预设只是起点，所有经历和结局仍由真实规则决定。</p><div id="home-presets" class="preset-grid"></div></section><div id="home-guide-slot"></div><footer>原生网页 · 本地存档 · CC0美术 <a href="https://github.com/chen-yy2008/ai-dungeon-simulator">查看开源仓库</a></footer></section>
+  <main class="app" hidden>
+    <header class="header"><div><p class="eyebrow">AI DUNGEON SIMULATOR / V1.0.0</p><h1>艾尔文边境<span class="header-seal">边境纪行</span></h1><p class="subtitle">一张人物卡，一段无人操控的边境冒险。</p></div><div class="world-clock"><span>✦ 世界历 · 与播放速度独立</span><strong id="clock">第 1 天 · 08:00</strong><small id="seed-label"></small></div></header>
     <div class="toolbar" aria-label="模拟控制">
       <button id="toggle" class="primary" type="button">开始模拟</button>
-      <select id="speed" aria-label="播放速度"><option value="slow">慢速 · 700 ms</option><option value="normal" selected>正常 · 250 ms</option><option value="fast">快速 · 60 ms</option></select>
+      <select id="speed" aria-label="播放速度"><option value="slow">慢速 · 2.2秒</option><option value="normal" selected>正常 · 1.4秒</option><option value="story">纪行 · 0.6秒</option><option value="fast">快速 · 60ms</option></select>
       <details id="toolbar-more" class="toolbar-more" open><summary>更多操作</summary><div class="extra-controls"><button id="new-adventure" class="secondary" type="button">新建冒险</button>
       <button id="regenerate" class="secondary" type="button">重新生成世界</button>
-      <button id="save" class="secondary" type="button">保存</button>
+      <button id="go-home" class="secondary" type="button">回到开场</button><button id="show-ending" class="secondary" type="button">战报与结局</button><button id="save" class="secondary" type="button">保存</button>
       <button id="tutorial-replay" class="secondary" type="button">鸦羽教程</button><button id="biography" class="secondary" type="button">个人传记</button><button id="load" class="secondary" type="button">读取</button>
       </div></details><span id="status" role="status">等待</span>
     </div>
@@ -69,7 +71,7 @@
   </main>
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-form"><p class="eyebrow">一段新的旅程</p><h2 id="create-title">创建你的冒险者</h2><p class="dialog-intro">设定性格与愿望，随后交由规则型 AI 自主冒险。五种倾向可以同时存在。</p>
-      <div class="form-grid"><label>姓名<input id="name-input" name="name" maxlength="24" value="艾尔文" required></label><label>职业原型<select id="class-input" name="classId"><option value="warrior">战士</option><option value="rogue">游荡者</option><option value="mage">法师</option></select></label><label>初始目标<select id="goal-input" name="goal"><option value="explore">探索边境</option><option value="wealth">积累 100 金币</option><option value="survive">平安度过三天</option></select></label><label>随机种子<input id="seed-input" name="seed" maxlength="80" placeholder="相同配置与种子可复现"></label></div>
+      <div class="creation-preview"><img id="creation-portrait" src="assets/knight-portrait.png" width="76" height="76" alt="所选职业像素肖像"><p>设定性格与愿望，随后由角色自行行动。高级项目可保持默认。</p></div><div class="form-grid"><label>姓名<input id="name-input" name="name" maxlength="24" value="艾尔文" required></label><label>职业原型<select id="class-input" name="classId"><option value="warrior">战士</option><option value="rogue">游荡者</option><option value="mage">法师</option></select></label></div>
       <p id="class-description" class="hint"></p><p id="patron-description" class="hint"></p><fieldset class="traits"><legend>性格权重 · 0～100</legend>
         <label for="courage">勇敢 <output id="courage-value">60</output><input id="courage" name="courage" type="range" min="0" max="100" value="60"></label>
         <label for="caution">谨慎 <output id="caution-value">55</output><input id="caution" name="caution" type="range" min="0" max="100" value="55"></label>
@@ -77,7 +79,7 @@
         <label for="kindness">善良 <output id="kindness-value">65</output><input id="kindness" name="kindness" type="range" min="0" max="100" value="65"></label>
         <label for="curiosity">好奇 <output id="curiosity-value">70</output><input id="curiosity" name="curiosity" type="range" min="0" max="100" value="70"></label>
       </fieldset>
-      <details class="card-editor"><summary>角色设定与 JSON 导入导出</summary>
+      <details class="card-editor"><summary>高级设定 · 目标、种子与 JSON 角色卡</summary><div class="form-grid"><label>初始目标<select id="goal-input" name="goal"><option value="explore">探索边境</option><option value="wealth">积累 100 金币</option><option value="survive">平安度过三天</option></select></label><label>随机种子<input id="seed-input" name="seed" maxlength="80" placeholder="相同配置与种子可复现"></label></div>
         <label class="continuous-choice"><input id="endless-input" type="checkbox">持续观察：不自动收束阶段冒险</label><p class="hint">六维与设定等级不重算战斗。短/长期愿望和能力文本为背景；价值观、行为权重和弱点进入规则决策。</p>
         <div class="form-grid"><label>身份<input id="identity-input" maxlength="80"></label><label>设定等级<input id="level-input" type="number" min="1" max="20" value="1" required></label></div>
         <label>背景<textarea id="background-input" maxlength="1000" rows="3"></textarea></label>
@@ -95,6 +97,7 @@
     </form>
   </dialog>
   <dialog id="details-dialog" aria-labelledby="details-title"><div class="dialog-heading"><h2 id="details-title">角色详情</h2><button class="text-button" type="button" data-close="details-dialog">关闭 ×</button></div><div class="dialog-actions"><button id="edit-character" class="secondary" type="button">编辑设定并新建冒险</button><button id="export-character" class="secondary" type="button">导出当前角色卡</button></div><div id="character-details"></div></dialog>
+  <dialog id="ending-dialog" aria-labelledby="ending-title"><div class="ending-banner"><img id="ending-portrait" width="114" height="114" alt="本次冒险者肖像"><p class="eyebrow">鸦羽 · 边境纪行</p><h2 id="ending-title" tabindex="-1"></h2><p id="ending-subtitle"></p></div><div id="ending-record"></div><div class="dialog-actions"><button id="copy-report" class="primary" type="button">复制战报</button><button id="download-story" type="button">下载完整故事</button><button id="ending-export-card" type="button">导出角色卡</button></div><p id="share-notice" role="status"></p><textarea id="share-fallback" rows="6" aria-label="可手动复制的战报文本" hidden readonly></textarea><div class="dialog-actions"><button id="ending-restart" type="button">重开一局</button><button id="ending-observe" type="button">返回观察</button></div></dialog>
   <dialog id="biography-dialog" aria-labelledby="biography-title"><div class="dialog-heading"><h2 id="biography-title">鸦羽的个人传记</h2><button type="button" data-close="biography-dialog">关闭</button></div><pre id="biography-text"></pre></dialog>
   <dialog id="history-dialog" aria-labelledby="history-title"><div class="dialog-heading"><h2 id="history-title">冒险历史</h2><button class="text-button" type="button" data-close="history-dialog">关闭 ×</button></div><p id="history-summary" class="dialog-intro"></p><ol id="history-list"></ol><button id="history-more" class="secondary" type="button">查看更早记录</button></dialog>
 </body>

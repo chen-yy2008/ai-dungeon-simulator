@@ -1,18 +1,37 @@
-# AI Dungeon Simulator v0.9.0 · 命运编织
+# AI Dungeon Simulator v1.0.0 · 边境纪行
 
 一名拥有性格与目标的冒险者，在艾尔文边境自主旅行、处理事件、探索地牢、战斗与成长。你是观察者，创建角色后无需控制移动或攻击。原生HTML/CSS/JavaScript与Canvas，无注册、后端、付费API、CDN或运行依赖。
 
-[在线游玩](https://chen-yy2008.github.io/ai-dungeon-simulator/) · [仓库](https://github.com/chen-yy2008/ai-dungeon-simulator) · [版本记录](CHANGELOG.md) · [本版验收](docs/releases/v0.9-report.md)
+[在线游玩](https://chen-yy2008.github.io/ai-dungeon-simulator/) · [仓库](https://github.com/chen-yy2008/ai-dungeon-simulator) · [版本记录](CHANGELOG.md) · [本版验收](docs/releases/v1.0-report.md)
 
-![法师的真实神迹](docs/v08/miracle-mage.png)
+![艾尔文边境开场](docs/v10/home-desktop.png)
 
 ## 30秒上手
-1. 打开在线网址，或桌面Chrome/Edge直接打开index.html（支持file://）。
-2. 输入姓名，选择战士/游荡者/法师，调整五种性格和初始目标，点击创建。
-3. 角色自动准备、离镇、进入遗迹、治疗、战斗和撤退。可暂停、调速；手机底部切换地图/人物/纪事。
-4. 更多操作提供保存、读取、新建和重开；角色详情查看信仰、装备、技能、关系与记忆。
 
-推荐探索目标、默认性格、种子world-browser-003、快速播放。相同版本/种子/初始设定可复现，播放速度与游戏时间分离。每25动作、暂停和退出自动保存，手动存取同一localStorage槽；读取后暂停。存储受浏览器策略限制，无云同步。
+1. [打开在线网页](https://chen-yy2008.github.io/ai-dungeon-simulator/)，或直接用Chrome/Edge打开本地index.html。
+2. 点击一张预设角色卡立即出发；想自行设定，选「开始新冒险」。不必填写高级JSON。
+3. 跟随可跳过的鸦羽文字引导，观察角色自行移动、处理事件、战斗和换装。你只需暂停、倍速和翻阅记录。
+4. 完成三线并返回小镇，或合理撤退/死亡后，会出现真实结算；「复制战报」「下载完整故事」可直接分享。
+
+|一键预设|性格与神明|固定种子下实际体验|
+|---|---|---|
+|伊芙·誓灯 / 战士|善良勇敢，瓦尔铎|守护与援助，776行动得到边境守护者|
+|洛恩·夜途 / 游荡者|贪婪且重退路，诺克斯|牟利与风险，852行动得到逐利旅人|
+|瑟拉·织星 / 法师|好奇而节制，艾蕾娅|调查/有限魔法，906行动得到秘法追寻者|
+
+预设不会直接发放结局或装备，以上结果由同版本真实规则跑出。姓名、职业、五项独立性格可自定，选择后自动绑定原创神明。不同种子或设定会产生不同结果。
+
+正常播放每行动1.4秒，三预设约18～21分钟纯播放；慢速2.2秒、纪行0.6秒、快速60ms。「观看示例」使用稳定法师种子和纪行速度，约9分钟，也可立即快进。这是按实际行动数估算的节奏，不含读日志/教学暂停；浏览器后台可能降速。
+
+手机底部切换地图/人物/纪事，「更多操作」保存/读取/回到开场/查看传记。localStorage自动保存在每25动作、暂停、退出和结局；手动存取同一槽，读取后暂停。新世界未开始前不覆盖旧存档。错误JSON、禁用存储或空间不足会提示，继续游戏仍可进行；无云同步。
+
+## v1.0开场、收束与分享
+
+真实CC0像素场景首页、继续旅程、三预设、一键示例、教程与简介。创建只需姓名/职业/性格，高级目标、种子和角色卡折叠。
+
+结算展示肖像、称号、神明、成长、装备技能、真实选择、关系和记忆；可返回观察地图/历史，或重开。复制战报不含账号/浏览器数据；复制被限制时保留选中文本。Markdown下载由客户端Blob生成，收录按事实ID/时间组织的关键传记，非全部逐步轨迹。角色卡JSON导出继续可用。不上传存档，不把大数据塞进URL。
+
+![390px真实结算](docs/v10/ending-mobile.png)
 
 ## v0.9人与因果
 商队营地的救援/付费/牟利/放弃、三座实际碑文与入口法阵的封印/净化/取能、最后一封信的归还/隐瞒/牟利/拒绝，均需实际到达与后续在场回访。关系改变药水/住宿价格、委托开放、情报优先级和有限危机援助，安全商路降低逐格旅行疲劳。三条线继承已有商队/测绘/旅馆委托，不重置旧世界。
@@ -48,6 +67,7 @@
 - core.js：连通地牢、已知地图Explorer、d20与回合结算。
 - world.js：World/Character/Agent/Simulation、时间/旅行/合法状态变更/存档。
 - events.js、living-world.js：有限事件、NPC日程/关系与跨日委托。
+- experience.js：预设与只读战报/传记分享。
 - story-rules.js、narrative.js、tutorial.js：有限主线/终局、只读史官/传记、独立教程。
 - progression.js：数据驱动神明/装备/技能/成长，由Simulation调用。
 - character-card.js、card-editor.js：纯角色设定、校验、编辑/导出。
@@ -57,11 +77,13 @@
 Agent结合性格、目标、风险、资源、关系与经历评分，并使用种子控制少量扰动；它是规则系统，不是LLM。UI/叙事/动画不改变世界、不消费世界随机数。
 
 ## 测试与发布
-运行不需要Node；开发使用Node22+，执行node tests/check.cjs、node tests/world.cjs、node tests/fate.cjs、node tests/story.cjs及tests内UI/角色/NPC/素材/Pages检查。node tests/browser.cjs使用本机Chrome/Edge、独立忽略配置与原生CDP，BROWSER_PATH指定浏览器；BROWSER_FILE=1另验file://。截图/依赖临时资料在忽略目录，正式证据见docs。Windows PowerShell保护测试：powershell -NoProfile -File tests/publish.ps1。具体实际计数和未验证范围见各[版本报告](docs/releases/)。
+运行不需要Node；开发使用Node22+，执行node tests/check.cjs、node tests/world.cjs、node tests/fate.cjs、node tests/story.cjs、node tests/experience.cjs及tests内UI/角色/NPC/素材/Pages检查。node tests/browser.cjs使用本机Chrome/Edge、独立忽略配置与原生CDP，BROWSER_PATH指定浏览器；BROWSER_FILE=1另验file://。截图/依赖临时资料在忽略目录，正式证据见docs。Windows PowerShell保护测试：powershell -NoProfile -File tests/publish.ps1。具体实际计数和未验证范围见各[版本报告](docs/releases/)。
 
 正式发布遵循[AGENTS](AGENTS.md)和[发布指南](docs/PUBLISHING.md)：准确文件白名单→安全/测试门禁→提交/注释Tag→原子推送→Actions→Pages SHA/HTTP/在线浏览器核验，不强推。
 
-## 素材与局限
+## 实测与局限
 22张CC0 PNG约186KiB，来自官方Ninja Adventure（Pixel-Boy/AAA）与Kenney Fantasy UI Borders；全部本地托管。[授权/来源](docs/ASSETS.md)、[致谢](docs/CREDITS.md)、[v0.6/v0.7真实对比](docs/visual-comparison/README.md)。新增神徽/反馈原创Canvas/CSS，不使用官方游戏立绘。
 
-世界道路固定、NPC按日程换点非连续寻路；单目标简化规则，装备/事件有限；三主线与阶段结局均已实现；开场预设与分享界面按有限队列留待v1.0。历史最多2000条，本地单存档槽，无云同步/多人/外部角色搜索/LLM。已验证Windows Chrome/Edge及390px模拟触屏，未实际验证iOS/Safari或真实手机硬件。
+世界道路固定、NPC按日程换点非连续寻路；单目标简化规则，装备/事件有限；三主线与阶段结局均已实现；开场预设、结算与分享均已完成。用户后续另授权的v1.1体验增强在v1.0验收后独立执行。历史最多2000条，本地单存档槽，无云同步/多人/外部角色搜索/LLM。已验证Windows Chrome/Edge及390px模拟触屏，未实际验证iOS/Safari或真实手机硬件。
+
+本版Windows Chrome/Edge、file://与HTTP、375/390/430px模拟触摸、实际故事下载与战报复制/回退、旧交互/存取/自然结局均实测。除原300地图/300战斗与世界585708动作压力，还有新预设/持续观察/贫穷谨慎184563动作；保存夹具来自真实v0.3.0/v0.6.0标签代码，迁移保持资源/历史/RNG并续演。见[版本报告](docs/releases/v1.0-report.md)与[截图](docs/v10/)。浏览器E2E用了虚拟时钟快进，并单独检查真实计时暂停；没有假称真人等待20分钟试玩，也未验证真实iOS/Safari硬件。

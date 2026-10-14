@@ -52,3 +52,5 @@ for(const [branches,expected] of [[{caravan:'rescued',letter:'returned',stars:'s
 a.character.hp=0;assert.equal(S.endingCode(a),'fallen');
 console.log(`v0.9 saga passed: three causal chains/all primary branches/failure/due/real locations/finite rewards, four relationship effects, old save/replay, nine truthful narrator categories; ${total} natural actions and ${outcomes.size} distinct outcomes.`);
 
+
+a=new Simulation({classId:'mage',seed:'dangerous-rite'});a.enterDungeon();a.character.hp=1;a.character.potions=0;Object.assign(a.world.saga.stars,{stage:'ritual',clues:[0,1,2]});const beforeRite=a.character.hp;assert.equal(S.tryDungeon(a),false);assert.equal(a.character.hp,beforeRite,'Unsafe ritual yields to actual retreat/heal logic');

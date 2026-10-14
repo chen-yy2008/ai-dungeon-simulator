@@ -16,6 +16,7 @@
   }
   function fact(sim,line,title,text,extra={}){
     sim.record('saga',title,text,undefined,{line,stage:sim.world.saga[line].stage,...extra});
+    const previous=sim.character.memories.find(m=>m.id==='saga-'+line);if(previous)previous.note=text;
     sim.remember('saga-'+line,text);
   }
   function choose(sim,choices){
@@ -119,6 +120,7 @@
   }
   function tryDungeon(sim){
     const c=sim.character,w=sim.world,s=w.saga,q=s.stars,d=sim.dungeon;
+    if(c.hp/c.maxHp<=sim.agent.threshold(c)||c.fatigue>=80)return false;
     if(q.stage!=='ritual'||!at(c.position,d.start)||d.explorer.known[c.position.y][c.position.x]!==1||d.retreating)return false;
     const o=choose(sim,[{action:'seal',label:'封印星辉法阵',traits:{caution:.55,kindness:.2},values:['责任']},{action:'purify',label:'净化星辉法阵',traits:{curiosity:.4,kindness:.4},patron:'mage',values:['知识'],allowed:c.potions>0||c.rpg.mp>=2},{action:'take',label:'带走法阵能量',traits:{greed:.85,courage:.1},goal:'wealth'}]);
     let detail='';

@@ -87,6 +87,10 @@ async function run() {
   const fileUrl = process.env.BROWSER_URL || (server.listening ? 'http://127.0.0.1:'+server.address().port+'/' : pathToFileURL(path.resolve(__dirname, '../index.html')).href);
   const waitReady = async () => {
     for (let i = 0; i < 100; i++) {
+      if(await evaluate("document.getElementById('welcome-screen')?.hidden===false && document.querySelectorAll('[data-preset]').length===3")){
+        await evaluate('PixelAssets.ready');const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'homepage-v10.png'),Buffer.from(shot.data,'base64'));
+        await evaluate("document.getElementById('home-start').click()");
+      }
       if (await evaluate(`document.getElementById('create-dialog')?.open === true`)) return;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
@@ -102,6 +106,7 @@ async function run() {
     await evaluate(`document.getElementById('class-input').value = '${classId}'; document.getElementById('class-input').dispatchEvent(new Event('change')); document.getElementById('name-input').value = '边境观察者'; document.getElementById('seed-input').value = '${seed}'; if(document.getElementById('endless-input'))document.getElementById('endless-input').checked=true; document.getElementById('create-form').requestSubmit()`);
   };
   const loadSnapshot = async snapshot => {
+    await evaluate("if(document.getElementById('ending-dialog')?.open)document.getElementById('ending-dialog').close()");
     await evaluate(`localStorage.setItem('ai-dungeon-simulator:v0.3', ${JSON.stringify(JSON.stringify(snapshot))})`);
     await click('load');
   };
@@ -159,13 +164,13 @@ async function run() {
   await send('Emulation.setDeviceMetricsOverride', { width: 1240, height: 1420, deviceScaleFactor: 1, mobile: false });
   assert.equal(await evaluate(`document.getElementById('create-dialog').open`), false);
   assert.equal(await jobs(), 1);
-  assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), 250);
+  assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), await evaluate('typeof AdventureExperience!=="undefined"?1400:250'));
   assert.equal((await model()).phase, 'world');
   await tick(); await click('toggle');
   const pausedClock = await clock();
   assert.equal(await jobs(), 0); assert.equal(await tick(), false); assert.equal(await clock(), pausedClock);
   await speed('slow'); assert.equal(await jobs(), 0);
-  await click('toggle'); assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), 700);
+  await click('toggle'); assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), await evaluate('typeof AdventureExperience!=="undefined"?2200:700'));
   await speed('fast'); assert.equal(await jobs(), 1); assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), 60);
   await evaluate('for (let i = 0; i < 18; i++) testClock.tick()');
   let state = await model();
@@ -192,7 +197,7 @@ async function run() {
   const expanded=await evaluate(`(()=>{const s=Adventure.Simulation.fromSave(JSON.parse(localStorage.getItem('ai-dungeon-simulator:v0.3')));for(let i=0;i<3000;i++){if(s.phase==='dungeon'&&s.dungeon.explorer.visited.size>=40)return s.toSave();s.step();}throw Error('Cannot reach actual expanded dungeon');})()`);
   await loadSnapshot(expanded);await screenshot('dungeon-expanded.png');await loadSnapshot(battleSave);
   assert.equal(await jobs(), 0); await speed('slow'); await tick(); assert.deepEqual(await model(), battleSave);
-  await click('toggle'); assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), 700);
+  await click('toggle'); assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'), await evaluate('typeof AdventureExperience!=="undefined"?2200:700'));
   await speed('fast'); assert.equal(await jobs(), 1); await tick();
   assert.equal((await model()).character.moves, battleMoves, '战斗行动不增加移动步数');
   await loadSnapshot(battleSave); assert.deepEqual(await model(), battleSave);
@@ -333,6 +338,45 @@ async function run() {
     const ended=await model();assert.equal(ended.status,'complete');assert.ok(ended.world.saga.ending);assert.equal(await jobs(),0);await screenshot('ending-v09.png');
     assert.ok(ended.world.saga.milestones.some(x=>x.type==='saga'));assert.ok(await evaluate("document.getElementById('status').textContent.includes('秘法')"));await loadSnapshot(baseline);
     console.log('v0.9 浏览器通过：桌面/390px欢迎→创建→位置→真实NPC→判定→成长→保存教程、暂停恢复/跳过/重播、真实传记与自然阶段结局。');
+  }
+
+
+  if(await evaluate('typeof AdventureExperience!=="undefined"')){
+    const baseline=await model(),results=[];
+    const touchClick=async selector=>{const p=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);if(await evaluate('innerWidth<500')){await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...p,radiusX:3,radiusY:3}]});await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}else{await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...p});await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...p});}};
+    await click('go-home');assert.equal(await jobs(),0);await click('home-continue');assert.deepEqual(await model(),baseline);assert.equal(await jobs(),0);
+    await click('go-home');await evaluate("localStorage.setItem('ai-dungeon-simulator:v0.3','{broken')");await click('home-continue');assert.equal(await evaluate("document.getElementById('welcome-screen').hidden"),false);assert.ok(await evaluate("document.getElementById('home-notice').textContent.includes('无法继续')"));await loadSnapshot(baseline);
+    for(const [width,preset] of [[1240,'demo'],[375,'oath'],[390,'night'],[430,'star']]){
+      await send('Emulation.setDeviceMetricsOverride',{width,height:940,deviceScaleFactor:width<500?2:1,mobile:width<500});await click('go-home');await screenshot('home-v10-'+width+'.png');
+      assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
+      const before=Date.now();await touchClick(preset==='demo'?'#home-demo':'[data-preset="'+preset+'"]');
+      assert.equal(await evaluate("document.getElementById('welcome-screen').hidden"),true);assert.equal(await jobs(),1);assert.equal(await evaluate('Array.from(testClock.jobs.values())[0].delay'),preset==='demo'?600:1400);
+      let battleCaptured=false;
+      for(let batch=0;batch<65&&await jobs();batch++){
+        const battle=await evaluate("(()=>{for(let i=0;i<50&&testClock.jobs.size;i++){testClock.tick();if(document.getElementById('event-heading').textContent==='自动战斗')return true;}return false;})()");
+        if(battle&&!battleCaptured){battleCaptured=true;await screenshot('battle-v10-'+width+'.png');}
+      }
+      const ended=await model();assert.equal(ended.status,'complete');assert.equal(await jobs(),0);assert.equal(await evaluate("document.getElementById('ending-dialog').open"),true);
+      assert.ok(await evaluate("document.getElementById('ending-title').textContent.length>0"));await screenshot('ending-v10-'+width+'.png');
+      assert.ok(await evaluate("Array.from(document.querySelectorAll('#ending-dialog button')).filter(b=>b.getClientRects().length).every(b=>b.getBoundingClientRect().height>=44)"));
+      const downloadPath=path.join(output,'story-download-'+width);fs.mkdirSync(downloadPath,{recursive:true});const file=path.join(downloadPath,'border-chronicle.md');if(fs.existsSync(file))fs.unlinkSync(file);
+      await send('Page.setDownloadBehavior',{behavior:'allow',downloadPath});await click('download-story');
+      for(let i=0;i<60&&!fs.existsSync(file);i++)await new Promise(r=>setTimeout(r,50));assert.ok(fs.existsSync(file),'Actual Markdown story download');const markdown=fs.readFileSync(file,'utf8');assert.ok(markdown.includes(ended.character.name)&&markdown.includes('事实#')&&markdown.includes(ended.world.saga.ending.title));
+      await send('Page.bringToFront');if(!fileUrl.startsWith('file:'))await send('Browser.grantPermissions',{origin:new URL(fileUrl).origin,permissions:['clipboardReadWrite','clipboardSanitizedWrite']});
+      await click('copy-report');await new Promise(r=>setTimeout(r,200));const copied=await evaluate("document.getElementById('share-notice').textContent.includes('已复制')");
+      if(copied&&!fileUrl.startsWith('file:')){assert.equal(await evaluate("navigator.clipboard.readText().then(t=>t.startsWith('# 艾尔文边境')&&t.includes('v1.0.0'))"),true);}else if(!copied){assert.equal(await evaluate("document.getElementById('share-fallback').hidden"),false);assert.ok(await evaluate("document.getElementById('share-fallback').value.includes('战报')"));}
+      if(width===390){
+        await evaluate("Object.defineProperty(navigator,'clipboard',{value:undefined,configurable:true})");await click('copy-report');assert.equal(await evaluate("document.getElementById('share-fallback').hidden"),false);assert.ok(await evaluate("document.getElementById('share-fallback').value.startsWith('# 艾尔文边境')"));await evaluate('delete navigator.clipboard');
+        await evaluate("(()=>{const original=Storage.prototype.setItem;try{Storage.prototype.setItem=function(){throw Error('quota fixture')};document.getElementById('save').click();}finally{Storage.prototype.setItem=original}})()");assert.ok(await evaluate("document.getElementById('notice').textContent.includes('未允许本地存储')"));assert.equal((await model()).status,'complete');
+      }
+      await evaluate("document.getElementById('ending-dialog').scrollTop=document.getElementById('ending-dialog').scrollHeight");await screenshot('share-v10-'+width+'.png');
+      await click('ending-observe');assert.equal(await evaluate("document.getElementById('ending-dialog').open"),false);assert.equal(await jobs(),0);
+      if(width<500){await evaluate("document.querySelector('[data-mobile-view=character]').click()");await screenshot('card-v10-'+width+'.png');await evaluate("document.querySelector('[data-mobile-view=story]').click()");assert.ok(await evaluate("document.getElementById('chronicle').open"));assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'));}
+      results.push({width,preset,actions:ended.actions,ending:ended.world.saga.ending.title,miracles:ended.character.rpg.miracles,elapsedMs:Date.now()-before,playbackEstimateMinutes:ended.actions*(preset==='demo'?600:1400)/60000,virtualClock:true,downloaded:true,copied});
+      await click('show-ending');await click('ending-restart');assert.equal(await evaluate("document.getElementById('welcome-screen').hidden"),false);
+    }
+    fs.writeFileSync(path.join(output,'v10-e2e.json'),JSON.stringify(results,null,2));await send('Emulation.setDeviceMetricsOverride',{width:1240,height:1420,deviceScaleFactor:1,mobile:false});await loadSnapshot(baseline);await click('home-start');await evaluate("document.getElementById('create-dialog').close()");
+    console.log('v1.0真实端到端通过：首页/三预设/固定示例→实际战斗成长→结局；375/390/430px、继续/坏存档、实际MD下载、复制或可选文本回退、角色纪事和返回重开。时钟为加速测试，耗时记录在test-output/v10-e2e.json。');
   }
 
   // 再打开没有虚拟时钟的页面，检查真实播放与暂停。

@@ -1,0 +1,55 @@
+{
+  "browser": "Windows Edge",
+  "protocol": "file://",
+  "clock": "virtual test clock; no claim of human real-time play",
+  "cases": [
+    {
+      "width": 1240,
+      "preset": "demo",
+      "actions": 906,
+      "ending": "秘法追寻者",
+      "miracles": 2,
+      "elapsedMs": 2257,
+      "playbackEstimateMinutes": 9.06,
+      "virtualClock": true,
+      "downloaded": true,
+      "copied": true
+    },
+    {
+      "width": 375,
+      "preset": "oath",
+      "actions": 776,
+      "ending": "边境守护者",
+      "miracles": 5,
+      "elapsedMs": 2583,
+      "playbackEstimateMinutes": 18.106666666666666,
+      "virtualClock": true,
+      "downloaded": true,
+      "copied": true
+    },
+    {
+      "width": 390,
+      "preset": "night",
+      "actions": 852,
+      "ending": "逐利旅人",
+      "miracles": 1,
+      "elapsedMs": 2603,
+      "playbackEstimateMinutes": 19.88,
+      "virtualClock": true,
+      "downloaded": true,
+      "copied": true
+    },
+    {
+      "width": 430,
+      "preset": "star",
+      "actions": 906,
+      "ending": "秘法追寻者",
+      "miracles": 2,
+      "elapsedMs": 2571,
+      "playbackEstimateMinutes": 21.14,
+      "virtualClock": true,
+      "downloaded": true,
+      "copied": true
+    }
+  ]
+}
