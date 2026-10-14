@@ -83,7 +83,7 @@ class MapView extends root.LegacyMapView {
     // 最后覆盖未知格，角色/宝箱/装饰的边缘也不能泄露迷雾。
     for(let y=0;y<25;y++)for(let x=0;x<25;x++)if(d.explorer.known[y][x]===-1)this.rect(x*32,y*32,32,32,'#080c13');
   }
-  actor(sim,cell){this.sprite(this.visualPosition||sim.character.position,P.heroes[sim.character.classId],cell,this.direction,this.walkFrame);}
+  actor(sim,cell){this.sprite(this.visualPosition||sim.character.position,P.heroFor(sim.character,sim.config),cell,this.direction,this.walkFrame);}
   draw(sim,running=false){
     this.sim=sim;if(this.frame)cancelAnimationFrame(this.frame);this.frame=null;
     const previous=this.lastPosition,current={...sim.character.position,phase:sim.phase};this.lastPosition=current;this.visualPosition=null;this.walkFrame=0;

@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   const text = (id, value) => { $(id).textContent = value; };
   const cards = globalThis.CharacterCard, editor = new globalThis.CardEditor(cards, $);
-  let renderedAbilities = '', renderedClass = '', tutorial = null;
+  let renderedAbilities = '', renderedClass = '', tutorial = null, comfort = null;
   const STORAGE_KEY = 'ai-dungeon-simulator:v0.3';
   const delays = { slow: 2200, normal: 1400, story:600, fast: 60 };
   const experience=globalThis.AdventureExperience; let lastEnding='';
@@ -24,7 +24,7 @@
   function entry(record, story = false) {
     const li = document.createElement(story ? 'article' : 'li');
     const meta = document.createElement('span'); meta.className = 'log-step'; meta.textContent = `${timestamp(record.time)} · ${record.title}`;
-    const body = document.createElement('p'); body.textContent = story ? Chronicler.describe(record,sim.character) : record.text;
+    const body = document.createElement('p'); body.textContent = story ? Chronicler.describe(record,sim.character,comfort?.prefs.narration||'full') : record.text;
     li.append(meta, body); return li;
   }
   function renderLogs(force = false) {
@@ -32,7 +32,7 @@
     renderedRecord = sim.world.recordId;
     const story = $('story'), atBottom = story.scrollHeight - story.scrollTop - story.clientHeight < 40;
     $('log').replaceChildren(...sim.world.history.slice(-16).reverse().map(r => entry(r)));
-    story.replaceChildren(...sim.world.history.filter(r=>Chronicler.category(r)||['birth','result','victory'].includes(r.type)).slice(-18).map(r => entry(r, true)));
+    story.replaceChildren(...(comfort?.prefs.narration==='off'?[]:sim.world.history.filter(r=>Chronicler.category(r)||['birth','result','victory'].includes(r.type)).slice(-18)).map(r => entry(r, true)));
     const details = sim.world.history.filter(r => ['attack', 'escape', 'decision', 'result', 'battle', 'quest-check', 'quest-followup'].includes(r.type)).slice(-16).reverse();
     $('detail-log').replaceChildren(...details.map(r => entry(r)));
     if (!details.length) { const li = document.createElement('li'); li.textContent = '尚未进行判定。角色出发后，这里将记录真实骰点与重要选择。'; $('detail-log').append(li); }
@@ -53,7 +53,7 @@
     document.querySelector('.combat-panel').classList.toggle('battle-emphasis',!!battle);
 
     text('card-ac', c.ac); text('card-goal', A.GOALS[c.goal]); text('card-gear',F.item(c.rpg.equipment.weapon)?.name || '无武器');
-    if (renderedClass !== c.classId) { $('portrait').src = 'assets/' + globalThis.PixelAssets.heroes[c.classId] + '-portrait.png'; $('portrait').alt = A.CLASSES[c.classId].name + '原型像素头像'; renderedClass = c.classId; }
+    const appearance=PixelAssets.heroFor(c,sim.config);if (renderedClass !== appearance) { $('portrait').src='assets/'+appearance+'-portrait.png';$('portrait').alt=A.CLASSES[c.classId].name+'像素头像';renderedClass=appearance;}
     const abilitiesKey = JSON.stringify(c.abilities);
     if (renderedAbilities !== abilitiesKey) { renderedAbilities = abilitiesKey; $('ability-scores').replaceChildren(...A.ABILITIES.map(key => {
       const item = document.createElement('div'), label = document.createElement('span'), value = document.createElement('strong');
@@ -100,7 +100,7 @@
     }));
     if (renderedPhase !== sim.phase) { $('dungeon').className = sim.phase === 'dungeon' ? 'dungeon-transition' : 'world-transition'; renderedPhase = sim.phase; }
     $('saga-list').replaceChildren(...Object.entries(SagaRules.TITLES).map(([id,title])=>{const li=document.createElement('li'),q=sim.world.saga[id];li.textContent=title+' · '+({dormant:'尚无消息',offer:'回应请求',search:'寻信中',track:'执行原商队委托',choice:'前往营地',clues:'调查三碑 '+sim.world.saga.stars.clues.length+'/3',ritual:'前往遗迹法阵',followup:'等待在场回访',complete:'已结算'}[q.stage])+(q.branch?' / '+SagaRules.BRANCH_NAMES[q.branch]:'');return li}));
-    tutorial?.update(sim);
+    comfort?.update(sim);tutorial?.update(sim);
     const state = sim.status === 'complete' ? sim.world.saga.ending.title : sim.status === 'dead' ? '冒险失败' : !running ? started ? '暂停' : '等待' : battle ? '战斗中' : sim.pending ? '事件处理中' : '自主冒险中';
     text('status', state); text('toggle', sim.status !== 'alive' ? '冒险已结束' : running ? '暂停模拟' : started ? '继续模拟' : '开始模拟');
     $('toggle').disabled = sim.status !== 'alive';
@@ -165,7 +165,7 @@
   $('create-form').addEventListener('submit', event => {
     event.preventDefault();
     try {
-      const config = { card: editor.read(), seed: $('seed-input').value.trim() || freshSeed(), endless:$('endless-input').checked };
+      const card=editor.read();const config={card,seed:$('seed-input').value.trim()||freshSeed(),endless:$('endless-input').checked,openingLine:({warrior:'先守住身后的灯火，再踏进下一段路。',rogue:'每个秘密都有来路，我也会留好退路。',mage:'我愿亲手读懂未知，也会记住知识的代价。'}[card.classId])};
       showGame(); replaceSimulation(new A.Simulation(config), true); $('create-dialog').close(); tutorial?.update(sim);
     } catch (error) { text('card-notice', error.message); document.querySelector('.card-editor').open = true; return; }
     notify('角色已创建，AI 已接管行动。相同种子和角色配置会产生相同逻辑结果。');
@@ -217,22 +217,22 @@
     if (button.dataset.mobileView === 'story') $('chronicle').open = true;
   }));
   $('biography').addEventListener('click',()=>{text('biography-text',Chronicler.biography(sim));$('biography-dialog').showModal();});
-  tutorial=new RavenTutorial({get:$,active:()=>started,openCreation:()=>{showGame();if(!$('create-dialog').open)$('create-dialog').showModal();},pause:()=>{const before=running;running=false;cancelTimer();view.draw(sim,false);return before;},resume:before=>{if(before&&sim.status==='alive'&&!$('create-dialog').open){running=true;schedule();}render();},reveal:selector=>{const el=document.querySelector(selector);document.querySelectorAll('.tutorial-focus').forEach(x=>x.classList.remove('tutorial-focus'));if(el)el.classList.add('tutorial-focus');}});
+  tutorial=new RavenTutorial({get:$,active:()=>started,enterGame:showGame,openCreation:()=>{showGame();if(!$('create-dialog').open)$('create-dialog').showModal();},pause:()=>{const before=running;running=false;cancelTimer();view.draw(sim,false);return before;},resume:before=>{if(before&&sim.status==='alive'&&!$('create-dialog').open){running=true;schedule();}render();},reveal:selector=>{const el=document.querySelector(selector);if(!el)return;const panel=el.closest('.sidebar')?'character':el.closest('#chronicle')?'story':'map';document.body.dataset.mobilePanel=panel;document.querySelectorAll('[data-mobile-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mobileView===panel)));const detail=el.closest('details');if(detail)detail.open=true;if(el.closest('#chronicle'))$('chronicle').open=true;el.scrollIntoView({block:'center'});}});
 
   function showGame(){ $('welcome-screen').hidden=true;document.querySelector('.app').hidden=false;window.scrollTo(0,0);render(true); }
   function showHome(){running=false;cancelTimer();view.draw(sim,false);if(started)save(false);document.querySelectorAll('dialog[open]').forEach(d=>d.close());document.querySelector('.app').hidden=true;$('welcome-screen').hidden=false;try{$('home-continue').disabled=!localStorage.getItem(STORAGE_KEY);}catch{$('home-continue').disabled=true;}tutorial?.update(sim);window.scrollTo(0,0);}
   function startPreset(p,demo=false){
     editor.fill(cards.fromConfig(p));classDescription();$('seed-input').value=p.seed;$('endless-input').checked=false;
-    showGame();replaceSimulation(new A.Simulation({card:editor.read(),seed:p.seed,endless:false}),true);
+    showGame();replaceSimulation(new A.Simulation({card:editor.read(),seed:p.seed,endless:false,appearance:p.appearance,openingLine:p.declaration}),true);
     $('speed').value=demo?'story':'normal';$('create-dialog').close();tutorial?.characterStarted();tutorial?.update(sim);schedule();
     notify(demo?'示例采用真实规则与固定种子，纪行速度约10分钟，可随时暂停或加速。':'预设角色已出发；无需操作移动或攻击。');
   }
   function showEnding(){
     const c=sim.character,s=sim.world.saga; $('ending-dialog').dataset.ending=s.ending?.code||'ongoing';
-    $('ending-portrait').src='assets/'+PixelAssets.heroes[c.classId]+'-portrait.png';text('ending-title',s.ending?.title||'旅途仍在继续');text('ending-subtitle',c.name+' · '+A.CLASSES[c.classId].name+' · '+F.PATRONS[c.classId].name);
+    $('ending-portrait').src='assets/'+PixelAssets.heroFor(c,sim.config)+'-portrait.png';text('ending-title',s.ending?.title||'旅途仍在继续');text('ending-subtitle',c.name+' · '+A.CLASSES[c.classId].name+' · '+F.PATRONS[c.classId].name);
     const rows=[['真实战绩','战斗等级 '+c.rpg.combatLevel+' / XP '+c.rpg.xp+' / 击杀 '+c.kills+' / 移动 '+c.moves+'步 / 神迹 '+c.rpg.miracles+'次'],['阶段与时间',s.ending?'于'+timestamp(s.ending.time)+'收束，地图与记录仍可浏览。':'尚未结束，现在导出的战报如实标为旅途中。'],['装备与技能',Object.values(c.rpg.equipment).filter(Boolean).map(id=>F.item(id).name).join('、')+'；'+Object.entries(c.rpg.skills).map(([k,v])=>k+' '+v+'次').join('、')],['信赖与分歧',Object.values(sim.world.npcs).map(n=>n.name+' '+n.relationship+(n.relationship>=10?'（信赖）':n.relationship<=-10?'（冷淡）':'（普通）')).join(' · ')],...Object.entries(SagaRules.TITLES).map(([id,title])=>[title,sim.world.saga[id].stage==='complete'?SagaRules.BRANCH_NAMES[sim.world.saga[id].branch]:'尚未结算，不计为成功']),...c.memories.filter(m=>m.id.startsWith('saga-')).map(m=>['关键回忆',m.note])];
     $('ending-record').replaceChildren(...rows.map(([label,value])=>{const p=document.createElement('p'),b=document.createElement('strong');b.textContent=label+' · ';p.append(b,document.createTextNode(value));return p;}));
-    text('share-notice','分享只含角色与实际冒险记录，不含账号或浏览器数据。');$('share-fallback').hidden=true;if(!$('ending-dialog').open)$('ending-dialog').showModal();$('ending-dialog').scrollTop=0;$('ending-title').focus({preventScroll:true});tutorial?.update(sim);
+    comfort?.ending(sim);text('share-notice','分享只含角色与实际冒险记录，不含账号或浏览器数据。');$('share-fallback').hidden=true;if(!$('ending-dialog').open)$('ending-dialog').showModal();$('ending-dialog').scrollTop=0;$('ending-title').focus({preventScroll:true});tutorial?.update(sim);
   }
   $('home-start').addEventListener('click',()=>{showGame();$('create-dialog').showModal();tutorial?.update(sim);});
   $('home-continue').addEventListener('click',()=>{try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)throw Error('尚无本地存档');A.Simulation.fromSave(JSON.parse(raw));$('load').click();showGame();}catch(e){notify('无法继续：'+e.message);}});
@@ -245,10 +245,11 @@
   $('ending-export-card').addEventListener('click',()=>editor.download(cards.exportCharacter(sim.character)));
   $('copy-report').addEventListener('click',async()=>{const content=experience.summary(sim);try{if(!navigator.clipboard)throw Error('clipboard unavailable');await navigator.clipboard.writeText(content);text('share-notice','战报已复制，可直接分享给朋友。');}catch{$('share-fallback').hidden=false;$('share-fallback').value=content;$('share-fallback').focus();$('share-fallback').select();let copied=false;try{copied=document.execCommand('copy');}catch{}text('share-notice',copied?'战报已复制；下方也保留可手动复制文本。':'浏览器限制自动复制，已选中下方战报，请手动复制。');}});
   $('download-story').addEventListener('click',()=>{const blob=new Blob([experience.summary(sim)+'\n\n'+experience.biography(sim)],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='border-chronicle.md';document.body.append(a);a.click();a.remove();requestAnimationFrame(()=>URL.revokeObjectURL(url));text('share-notice','已请求下载完整故事Markdown；其中每个关键节点都保留事实编号。');});
-  $('home-presets').replaceChildren(...experience.PRESETS.map(p=>{const item=document.createElement('article'),img=document.createElement('img'),h=document.createElement('h3'),body=document.createElement('p'),god=document.createElement('small'),button=document.createElement('button');item.className='preset-card';img.src='assets/'+PixelAssets.heroes[p.classId]+'-portrait.png';img.alt=A.CLASSES[p.classId].name+'像素肖像';img.width=76;img.height=76;h.textContent=p.name;body.textContent=p.description;god.textContent=A.CLASSES[p.classId].name+' · '+F.PATRONS[p.classId].name;button.textContent='观看'+p.name;button.dataset.preset=p.id;button.addEventListener('click',()=>startPreset(p));item.append(img,h,god,body,button);return item;}));
+  $('home-presets').replaceChildren(...experience.PRESETS.map(p=>{const item=document.createElement('article'),img=document.createElement('img'),h=document.createElement('h3'),body=document.createElement('p'),god=document.createElement('small'),button=document.createElement('button');item.className='preset-card';img.src='assets/'+PixelAssets.heroFor(p,p)+'-portrait.png';img.alt=A.CLASSES[p.classId].name+'像素肖像';img.width=76;img.height=76;h.textContent=p.name+' · '+p.archetype;body.textContent=p.description+' '+p.declaration;god.textContent=A.CLASSES[p.classId].name+' · '+F.PATRONS[p.classId].name;button.textContent='观看'+p.name;button.dataset.preset=p.id;button.addEventListener('click',()=>startPreset(p));item.append(img,h,god,body,button);return item;}));
   try{$('home-continue').disabled=!localStorage.getItem(STORAGE_KEY);}catch{$('home-continue').disabled=true;}
   const landingView=new MapView($('landing-map'));PixelAssets.ready.then(()=>landingView.draw(new A.Simulation({seed:'landing-scene'}),false));
 
+  comfort=new ComfortUI({get:$,model:()=>sim,tutorial:()=>tutorial,pause:()=>{const before=running;running=false;cancelTimer();view.draw(sim,false);return before;},resume:before=>{if(before&&sim.status==='alive'&&!$('create-dialog').open){running=true;schedule();}render();},refresh:()=>{renderedRecord=-1;render(true);}});
   const assetStatus = () => { const p = globalThis.PixelAssets; text('asset-status', p.status === 'ready' ? '本地 CC0 像素图集已就绪' : '部分图集加载失败，已使用简化后备画面。可重新打开页面重试。'); $('asset-status').classList.toggle('asset-warning', p.status !== 'ready'); render(); };
   globalThis.PixelAssets.ready.then(assetStatus);
   window.addEventListener('pagehide', () => { if (started && storageAvailable) save(false); });

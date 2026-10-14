@@ -3,7 +3,7 @@
   'use strict';
   const files = ['field', 'nature', 'town', 'stone-floor', 'stone-wall', 'props',
     'knight', 'hunter', 'sorcererblack', 'skeleton', 'villager', 'noble', 'woman',
-    'knight-portrait', 'hunter-portrait', 'sorcererblack-portrait', 'coin', 'potion', 'book', 'bag', 'dice', 'card-frame'];
+    'knight-portrait', 'hunter-portrait', 'sorcererblack-portrait', 'knightgold','inspector','sorcererorange','knightgold-portrait','inspector-portrait','sorcererorange-portrait','coin', 'potion', 'book', 'bag', 'dice', 'card-frame'];
   const heroes = { warrior: 'knight', rogue: 'hunter', mage: 'sorcererblack' };
   const hash = (x, y) => ((Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0);
   function roadQuarters(grid, x, y) {
@@ -11,7 +11,9 @@
       sx: (grid[y]?.[x + (qx ? 1 : -1)] ? 16 : qx ? 32 : 0) + qx * 8,
       sy: (grid[y + (qy ? 1 : -1)]?.[x] ? 16 : qy ? 32 : 0) + qy * 8 })));
   }
-  const api = { files, heroes, hash, roadQuarters, images: {}, status: 'loading', errors: [] };
+  const skinClasses={knightgold:'warrior',inspector:'rogue',sorcererorange:'mage'};
+  const heroFor=(character,config={})=>skinClasses[config.appearance]===character.classId?config.appearance:heroes[character.classId];
+  const api = { files, heroes, heroFor, hash, roadQuarters, images: {}, status: 'loading', errors: [] };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   root.PixelAssets = api;
   api.ready = Promise.all(files.map(id => new Promise(resolve => {

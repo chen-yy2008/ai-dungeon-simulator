@@ -21,7 +21,7 @@ for(const p of E.PRESETS){
 const legacy=new Simulation({seed:'migrate-v3'}).toSave();delete legacy.world.saga;delete legacy.character.rpg;delete legacy.character.profile.patronId;legacy.character.profile.version=1;
 const restored=Simulation.fromSave(legacy);assert.equal(restored.random.state,legacy.randomState);assert.deepEqual(restored.world.history,legacy.world.history);assert.equal(restored.character.gold,legacy.character.gold);
 for(const raw of [null,{},'{bad json'])assert.throws(()=>Simulation.fromSave(raw));
-console.log(`v1.0 maturity passed: 3 real preset conclusions, ${total} continuous/poor/cautious actions, finite bounds, safe reports, replay and v0.3/v0.6 additive migration.`);
+console.log(`Maturity passed: ${conclusions} real preset conclusions, ${total} continuous/poor/cautious actions, finite bounds, safe reports, replay and v0.3/v0.6 additive migration.`);
 
 for(const tag of ['03','06']){const old=require('./fixtures/historical-'+tag+'.json');const next=Simulation.fromSave(structuredClone(old));for(const key of ['hp','gold','potions','fatigue','inventory','position'])assert.deepEqual(next.character[key],old.character[key]);assert.deepEqual(next.world.history,old.world.history);assert.equal(next.random.state,old.randomState);for(let i=0;i<300&&next.status==='alive';i++)next.step();assert.ok(next.actions>old.actions);}
 console.log('Actual v0.3.0/v0.6.0 source-generated historical fixtures preserve state/RNG and continue 300 actions.');

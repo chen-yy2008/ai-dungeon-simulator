@@ -87,7 +87,7 @@ async function run() {
   const fileUrl = process.env.BROWSER_URL || (server.listening ? 'http://127.0.0.1:'+server.address().port+'/' : pathToFileURL(path.resolve(__dirname, '../index.html')).href);
   const waitReady = async () => {
     for (let i = 0; i < 100; i++) {
-      if(await evaluate("document.getElementById('welcome-screen')?.hidden===false && document.querySelectorAll('[data-preset]').length===3")){
+      if(await evaluate("document.getElementById('welcome-screen')?.hidden===false && document.querySelectorAll('[data-preset]').length>=3")){
         await evaluate('PixelAssets.ready');const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'homepage-v10.png'),Buffer.from(shot.data,'base64'));
         await evaluate("document.getElementById('home-start').click()");
       }
@@ -319,11 +319,13 @@ async function run() {
       await click('tutorial-next');await click('new-adventure');await click('tutorial-next');
       assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-dungeon:tutorial:v1')).step"),2);
       await create('mage','world-browser-003');assert.equal(await jobs(),0,'Guide pauses a running creation and keeps prior state');
-      await screenshot('raven-world-'+width+'.png');await click('tutorial-next');assert.equal(await jobs(),1,'Next restores earlier running state');
-      for(let stage=3;stage<=6;stage++){
+      await screenshot('raven-world-'+width+'.png');await click('tutorial-next');
+      const lastStep=await evaluate('RavenTutorial.totalSteps ? RavenTutorial.totalSteps-1 : 6');
+      if(lastStep===6)assert.equal(await jobs(),1,'Next restores earlier running state');
+      for(let stage=3;stage<=lastStep;stage++){
         for(let i=0;i<1600&&await evaluate("document.getElementById('tutorial-next').disabled");i++)await tick();
         assert.equal(await evaluate("document.getElementById('tutorial-next').disabled"),false,'Guide must be unlocked by actual facts');
-        assert.equal(await jobs(),0);if(stage===4||stage===5)await screenshot('raven-step-'+stage+'-'+width+'.png');
+        assert.equal(await jobs(),0);if([3,4,5,6,7,8].includes(stage))await screenshot('raven-step-'+stage+'-'+width+'.png');
         await click('tutorial-next');
       }
       assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-dungeon:tutorial:v1')).done"),true);
@@ -364,7 +366,7 @@ async function run() {
       for(let i=0;i<60&&!fs.existsSync(file);i++)await new Promise(r=>setTimeout(r,50));assert.ok(fs.existsSync(file),'Actual Markdown story download');const markdown=fs.readFileSync(file,'utf8');assert.ok(markdown.includes(ended.character.name)&&markdown.includes('事实#')&&markdown.includes(ended.world.saga.ending.title));
       await send('Page.bringToFront');if(!fileUrl.startsWith('file:'))await send('Browser.grantPermissions',{origin:new URL(fileUrl).origin,permissions:['clipboardReadWrite','clipboardSanitizedWrite']});
       await click('copy-report');await new Promise(r=>setTimeout(r,200));const copied=await evaluate("document.getElementById('share-notice').textContent.includes('已复制')");
-      if(copied&&!fileUrl.startsWith('file:')){assert.equal(await evaluate("navigator.clipboard.readText().then(t=>t.startsWith('# 艾尔文边境')&&t.includes('v1.0.0'))"),true);}else if(!copied){assert.equal(await evaluate("document.getElementById('share-fallback').hidden"),false);assert.ok(await evaluate("document.getElementById('share-fallback').value.includes('战报')"));}
+      if(copied&&!fileUrl.startsWith('file:')){assert.equal(await evaluate("navigator.clipboard.readText().then(t=>t.startsWith('# 艾尔文边境')&&t.includes(typeof Chronicles==='undefined'?'v1.0.0':'v1.1.0'))"),true);}else if(!copied){assert.equal(await evaluate("document.getElementById('share-fallback').hidden"),false);assert.ok(await evaluate("document.getElementById('share-fallback').value.includes('战报')"));}
       if(width===390){
         await evaluate("Object.defineProperty(navigator,'clipboard',{value:undefined,configurable:true})");await click('copy-report');assert.equal(await evaluate("document.getElementById('share-fallback').hidden"),false);assert.ok(await evaluate("document.getElementById('share-fallback').value.startsWith('# 艾尔文边境')"));await evaluate('delete navigator.clipboard');
         await evaluate("(()=>{const original=Storage.prototype.setItem;try{Storage.prototype.setItem=function(){throw Error('quota fixture')};document.getElementById('save').click();}finally{Storage.prototype.setItem=original}})()");assert.ok(await evaluate("document.getElementById('notice').textContent.includes('未允许本地存储')"));assert.equal((await model()).status,'complete');
@@ -377,6 +379,33 @@ async function run() {
     }
     fs.writeFileSync(path.join(output,'v10-e2e.json'),JSON.stringify(results,null,2));await send('Emulation.setDeviceMetricsOverride',{width:1240,height:1420,deviceScaleFactor:1,mobile:false});await loadSnapshot(baseline);await click('home-start');await evaluate("document.getElementById('create-dialog').close()");
     console.log('v1.0真实端到端通过：首页/三预设/固定示例→实际战斗成长→结局；375/390/430px、继续/坏存档、实际MD下载、复制或可选文本回退、角色纪事和返回重开。时钟为加速测试，耗时记录在test-output/v10-e2e.json。');
+  }
+
+  if(await evaluate('typeof Chronicles!=="undefined"')){
+    const baseline=await model();await click('toggle');assert.equal(await jobs(),1);
+    await click('tutorial-replay');assert.equal(await jobs(),0);await click('tutorial-next');await click('tutorial-next');await click('tutorial-next');
+    assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-dungeon:tutorial:v1')).step"),3);
+    await click('tutorial-prev');assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-dungeon:tutorial:v1')).step"),2);assert.equal(await jobs(),0);await click('tutorial-next');await click('tutorial-later');assert.equal(await jobs(),1);
+    for(let i=0;i<79;i++)await tick();assert.equal(await evaluate("document.getElementById('raven').hidden"),true);await tick();assert.equal(await evaluate("document.getElementById('raven').hidden"),false);assert.equal(await jobs(),0);await click('tutorial-skip');assert.equal(await jobs(),1);
+    await click('settings');assert.equal(await jobs(),0);const before=await model();
+    for(const mode of ['brief','off','full']){
+      await evaluate(`document.getElementById('narration-mode').value='${mode}';document.getElementById('narration-mode').dispatchEvent(new Event('change'))`);
+      assert.deepEqual(await model(),before);assert.equal(await evaluate("document.getElementById('raven-companion').hidden"),mode==='off');
+      assert.equal(await evaluate("document.getElementById('story').children.length===0"),mode==='off');
+    }
+    await click('reset-tutorial');await click('settings-close');await new Promise(r=>setTimeout(r,50));assert.equal(await jobs(),0);assert.equal(await evaluate("document.getElementById('raven').hidden"),false);await click('tutorial-skip');assert.equal(await jobs(),1);
+    await click('chronicles');assert.equal(await jobs(),0);assert.ok(await evaluate("document.querySelectorAll('#hero-roster details').length>=3"));await screenshot('chronicles-v11.png');await evaluate("document.getElementById('chronicles-dialog').close()");await new Promise(r=>setTimeout(r,50));assert.equal(await jobs(),1);await click('toggle');
+    for(const id of ['guard','cunning','devout']){
+      await click('go-home');await evaluate(`document.querySelector('[data-preset="${id}"]').click()`);assert.equal(await jobs(),1);
+      assert.ok(await evaluate("document.getElementById('portrait').src.includes('gold')||document.getElementById('portrait').src.includes('inspector')||document.getElementById('portrait').src.includes('orange')"));
+      let captured=false;for(let b=0;b<70&&await jobs();b++){const fought=await evaluate("(()=>{for(let i=0;i<40&&testClock.jobs.size;i++){testClock.tick();if(document.getElementById('event-heading').textContent==='自动战斗'&&document.getElementById('combat-result-detail').textContent.includes('实际伤害'))return true;}return false;})()");if(!captured&&fought){captured=true;await screenshot('feedback-v11-'+id+'.png','.combat-panel');await screenshot('causal-v11-'+id+'.png','#key-feedback');}}
+      assert.equal(captured,true,'Each added preset must actually fight; capture damage feedback');
+      const end=await model();assert.notEqual(end.status,'alive');assert.ok(end.world.history.some(r=>r.type==='declaration'));
+      assert.ok(await evaluate("document.querySelectorAll('#ending-timeline li').length>0"));assert.ok(await evaluate("document.getElementById('raven-epilogue').textContent.startsWith('鸦羽')"));
+      const count=await evaluate("JSON.parse(localStorage.getItem(Chronicles.BOOK_KEY)).heroes.length");await click('show-ending');assert.equal(await evaluate("JSON.parse(localStorage.getItem(Chronicles.BOOK_KEY)).heroes.length"),count);await screenshot('ending-v11-'+id+'.png');await click('ending-observe');
+    }
+    const book=await evaluate('localStorage.getItem(Chronicles.BOOK_KEY)');await send('Page.navigate',{url:fileUrl});await waitReady();assert.equal(await evaluate('localStorage.getItem(Chronicles.BOOK_KEY)'),book);await evaluate("document.getElementById('create-dialog').close()");await click('chronicles');assert.ok(await evaluate("document.querySelectorAll('#hero-roster details').length>=6"));await evaluate("document.getElementById('chronicles-dialog').close()");
+    await loadSnapshot(baseline);console.log('v1.1浏览器通过：九段/上一步/80动作提醒/重置/单计时器恢复；完整简洁关闭均不改存档；六预设实战、因果卡、自然结局时间线、名册跨刷新与去重。');
   }
 
   // 再打开没有虚拟时钟的页面，检查真实播放与暂停。

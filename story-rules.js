@@ -43,7 +43,7 @@
     if(type==='skill')key+=':'+facts.skill;
     if(type==='attack'&&!(facts.turn==='skeleton'&&sim.character.hp>0&&sim.character.hp<=sim.character.maxHp*.25))return;
     if(once&&s.indexed[key])return;
-    if(!['birth','battle','levelup','prayer','region','attack','skill','miracle','saga','quest','quest-followup','death','ending','aid','refusal'].includes(type))return;
+    if(!['birth','declaration','relationship','battle','levelup','prayer','region','attack','skill','miracle','saga','quest','quest-followup','death','ending','aid','refusal'].includes(type))return;
     if(once)s.indexed[key]=true;
     if(s.milestones.length<160)s.milestones.push({id:r.id,time:r.time,type:r.type,title:r.title,text:r.text,facts:JSON.parse(JSON.stringify(r.facts))});
   }

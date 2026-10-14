@@ -1,10 +1,10 @@
-# AI Dungeon Simulator v1.0.0 · 边境纪行
+# AI Dungeon Simulator v1.1.0 · 玩家体验增强
 
 一名拥有性格与目标的冒险者，在艾尔文边境自主旅行、处理事件、探索地牢、战斗与成长。你是观察者，创建角色后无需控制移动或攻击。原生HTML/CSS/JavaScript与Canvas，无注册、后端、付费API、CDN或运行依赖。
 
-[在线游玩](https://chen-yy2008.github.io/ai-dungeon-simulator/) · [仓库](https://github.com/chen-yy2008/ai-dungeon-simulator) · [版本记录](CHANGELOG.md) · [本版验收](docs/releases/v1.0-report.md)
+[在线游玩](https://chen-yy2008.github.io/ai-dungeon-simulator/) · [仓库](https://github.com/chen-yy2008/ai-dungeon-simulator) · [版本记录](CHANGELOG.md) · [本版验收](docs/releases/v1.1-report.md)
 
-![艾尔文边境开场](docs/v10/home-desktop.png)
+![艾尔文边境开场](docs/v11/home.png)
 
 ## 30秒上手
 
@@ -25,6 +25,18 @@
 
 手机底部切换地图/人物/纪事，「更多操作」保存/读取/回到开场/查看传记。localStorage自动保存在每25动作、暂停、退出和结局；手动存取同一槽，读取后暂停。新世界未开始前不覆盖旧存档。错误JSON、禁用存储或空间不足会提示，继续游戏仍可进行；无云同步。
 
+## v1.1 史官笺页与英雄编年史
+
+九段聚焦教学随真实冒险解锁：欢迎、职业神明、地图时间、人物卡、事件关系、地牢、战斗、成长、结局传记。羊皮纸对话框与原创像素鸦羽头像，高亮当前区域；支持上一步、永久跳过、稍后80次实际行动提醒。主菜单可重看，设置可重置；兼容旧版已完成/跳过状态，不强制重教老玩家。
+
+设置可选完整/简洁/关闭旁白与视觉反馈。右侧关键卡片最多显示最近3条，附实际因果/事实ID；战斗卡说明谁行动、命中、伤害和实际技能结果。仅显示首次施展，不把开局已有技能谎称新学会。设置、叙事和名册不消费游戏随机数。
+
+六预设补齐热血战士、谨慎卫士、贪财探子、狡黠游荡者、好奇法师、虔诚信徒；各有姓名、神明、五项性格、目标与真实起行宣言。新增布兰·石墙（谨慎战士/瓦尔铎）、希娅·薄雾（探索游荡者/诺克斯）、欧林·静烛（善良法师/艾蕾娅）使用同一官方CC0包的金甲、查访者、橙袍肖像和动画；只是外观，不额外赋予能力。
+
+局后选录关键时间线、重要选择、代表交锋与鸦羽结语。英雄编年史本地保存最多30位，五种命运按真实结局解锁；同角色设定/种子/结果恢复不重复收录。冒险存档、观看设置、名册是独立数据；损坏旧名册不覆盖，存储受限时当前页面仍可看并下载传记。清理浏览器数据会丢失名册，没有云同步。
+
+![手机聚焦教学](docs/v11/tutorial-mobile.png)
+
 ## v1.0开场、收束与分享
 
 真实CC0像素场景首页、继续旅程、三预设、一键示例、教程与简介。创建只需姓名/职业/性格，高级目标、种子和角色卡折叠。
@@ -36,7 +48,7 @@
 ## v0.9人与因果
 商队营地的救援/付费/牟利/放弃、三座实际碑文与入口法阵的封印/净化/取能、最后一封信的归还/隐瞒/牟利/拒绝，均需实际到达与后续在场回访。关系改变药水/住宿价格、委托开放、情报优先级和有限危机援助，安全商路降低逐格旅行疲劳。三条线继承已有商队/测绘/旅馆委托，不重置旧世界。
 
-原创史官「鸦羽」提供首次可跳过/重看的七段文本教程：欢迎→职业神明→位置/时间/暂停→居民记忆→实际判定→成长装备→保存/传记。教程独立本地存储，必要暂停后恢复之前播放状态。持续旁白只是事实的模板视图，九类事件有变体，不发奖、不耗规则随机数，不使用LLM或语音。
+v0.9首次引入史官「鸦羽」七段教程，v1.1已扩展为上述九段聚焦教学。教程独立本地存储，必要暂停后恢复之前播放状态。持续旁白只是事实的模板视图，九类事件有变体，不发奖、不耗规则随机数，不使用LLM或语音。
 
 个人传记保留关键事实ID/时间，按六章节归档，超出长日志上限也保留关键节点。称号按死亡→守护→秘法→逐利→幸存优先级决定。三线完成后回镇收束；1500动作后开始实际撤离并返镇作为兜底，未完成任务如实记为未完成。高级设定可选择持续观察，不自动收束。默认种子三职业约830～920动作结束；倍速改变现实播放时长，不伪造事件。
 
@@ -67,7 +79,8 @@
 - core.js：连通地牢、已知地图Explorer、d20与回合结算。
 - world.js：World/Character/Agent/Simulation、时间/旅行/合法状态变更/存档。
 - events.js、living-world.js：有限事件、NPC日程/关系与跨日委托。
-- experience.js：预设与只读战报/传记分享。
+- experience.js：六预设与只读战报/传记分享。
+- chronicles.js、comfort-ui.js：只读反馈模型、独立名册/偏好与UI；原游戏状态不改。
 - story-rules.js、narrative.js、tutorial.js：有限主线/终局、只读史官/传记、独立教程。
 - progression.js：数据驱动神明/装备/技能/成长，由Simulation调用。
 - character-card.js、card-editor.js：纯角色设定、校验、编辑/导出。
@@ -77,7 +90,7 @@
 Agent结合性格、目标、风险、资源、关系与经历评分，并使用种子控制少量扰动；它是规则系统，不是LLM。UI/叙事/动画不改变世界、不消费世界随机数。
 
 ## 测试与发布
-运行不需要Node；开发使用Node22+，执行node tests/check.cjs、node tests/world.cjs、node tests/fate.cjs、node tests/story.cjs、node tests/experience.cjs及tests内UI/角色/NPC/素材/Pages检查。node tests/browser.cjs使用本机Chrome/Edge、独立忽略配置与原生CDP，BROWSER_PATH指定浏览器；BROWSER_FILE=1另验file://。截图/依赖临时资料在忽略目录，正式证据见docs。Windows PowerShell保护测试：powershell -NoProfile -File tests/publish.ps1。具体实际计数和未验证范围见各[版本报告](docs/releases/)。
+运行不需要Node；开发使用Node22+，执行node tests/check.cjs、node tests/world.cjs、node tests/fate.cjs、node tests/story.cjs、node tests/experience.cjs、node tests/comfort.cjs及tests内UI/角色/NPC/素材/Pages检查。node tests/browser.cjs使用本机Chrome/Edge、独立忽略配置与原生CDP，BROWSER_PATH指定浏览器；BROWSER_FILE=1另验file://。截图/依赖临时资料在忽略目录，正式证据见docs。Windows PowerShell保护测试：powershell -NoProfile -File tests/publish.ps1。具体实际计数和未验证范围见各[版本报告](docs/releases/)。
 
 正式发布遵循[AGENTS](AGENTS.md)和[发布指南](docs/PUBLISHING.md)：准确文件白名单→安全/测试门禁→提交/注释Tag→原子推送→Actions→Pages SHA/HTTP/在线浏览器核验，不强推。
 

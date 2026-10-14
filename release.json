@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "branch": "main",
   "files": [
     ".gitignore",
@@ -132,7 +132,29 @@
     "docs/v10/tutorial-mobile.png",
     "docs/v10/ending-desktop.png",
     "docs/v10/ending-mobile.png",
-    "docs/v10/share-mobile.png"
+    "docs/v10/share-mobile.png",
+    "docs/specs/v1.1-spec.md",
+    "assets/knightgold-portrait.png",
+    "assets/knightgold.png",
+    "assets/inspector-portrait.png",
+    "assets/inspector.png",
+    "assets/sorcererorange-portrait.png",
+    "assets/sorcererorange.png",
+    "chronicles.js",
+    "comfort-ui.js",
+    "tests/comfort.cjs",
+    "docs/releases/v1.1-report.md",
+    "docs/v11/home.png",
+    "docs/v11/tutorial.png",
+    "docs/v11/tutorial-mobile.png",
+    "docs/v11/character.png",
+    "docs/v11/world.png",
+    "docs/v11/dungeon.png",
+    "docs/v11/combat.png",
+    "docs/v11/causal.png",
+    "docs/v11/ending.png",
+    "docs/v11/ending-mobile.png",
+    "docs/v11/chronicles.png"
   ],
   "runtimeAssets": [
     "assets/field.png",
@@ -158,6 +180,12 @@
     "assets/sorcererblack-portrait.png",
     "assets/card-frame.png",
     "assets/licenses/ninja-cc0.txt",
-    "assets/licenses/kenney-cc0.txt"
+    "assets/licenses/kenney-cc0.txt",
+    "assets/knightgold-portrait.png",
+    "assets/knightgold.png",
+    "assets/inspector-portrait.png",
+    "assets/inspector.png",
+    "assets/sorcererorange-portrait.png",
+    "assets/sorcererorange.png"
   ]
 }

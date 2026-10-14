@@ -42,9 +42,10 @@
   }
   function memory(sim, npcId, text, relation = 0) {
     const n = sim.world.npcs[npcId];
-    n.relationship = clamp(n.relationship + relation, -100, 100);
+    const before=n.relationship;n.relationship = clamp(n.relationship + relation, -100, 100);
     n.memories.push({ time: sim.world.minutes, text });
     if (n.memories.length > 24) n.memories.shift();
+    if(n.relationship!==before)sim.record('relationship','关系变化 · '+n.name,`${n.name}信任 ${n.relationship-before>=0?'+':''}${n.relationship-before}（${before} → ${n.relationship}）。因为${text}。`,undefined,{npc:npcId,npcName:n.name,delta:n.relationship-before,before,after:n.relationship,reason:text});
   }
   function prerequisites(sim, q) {
     if (q.id === 'caravan') return sim.world.scouting >= 1;

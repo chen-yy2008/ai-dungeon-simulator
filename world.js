@@ -150,6 +150,7 @@
       this.dungeon = null; this.fieldCombat = null; this.lastRest = -1000; S.install(this.world);
       this.record('birth', '冒险开始', `${this.character.name}在边境小镇醒来，携带 24 金币与 2 瓶治疗药水。`,
         `${this.character.name}带着${GOALS[this.character.goal]}的愿望来到艾尔文边境。`, { seed: this.config.seed });
+      if(typeof config.openingLine==='string'&&config.openingLine.trim()&&config.openingLine.length<=160)this.record('declaration','起行宣言',this.character.name+'说：'+config.openingLine.trim(),undefined,{speaker:this.character.name,line:config.openingLine.trim()});
     }
     get combat() { return this.phase === 'dungeon' ? this.dungeon.encounters : this.fieldCombat; }
     get context() {
@@ -508,6 +509,8 @@
     const grid = (g, size, values) => Array.isArray(g) && g.length === size && g.every(row => Array.isArray(row) && row.length === size && row.every(v => values.includes(v)));
     if (!save || save.version !== 3 || !save.config || !save.world || !save.character || !['world', 'dungeon'].includes(save.phase) || !['alive', 'dead', 'complete'].includes(save.status)) fail();
     const c = save.character, w = save.world;
+    if(save.config.openingLine!==undefined&&(typeof save.config.openingLine!=='string'||save.config.openingLine.length>160))fail();
+    const safeKeys=(value,depth=0)=>{if(depth>32)return false;if(!value||typeof value!=='object')return true;return Object.entries(value).every(([k,v])=>!['__proto__','constructor','prototype'].includes(k)&&safeKeys(v,depth+1));};if(!safeKeys(save))fail();
     if (!L.validate(w) || !S.valid(w) || !F.valid(c) || c.rpg&&c.rpg.lastPrayer>w.minutes) fail();
     if (c.abilities && !ABILITIES.every(key => Number.isInteger(c.abilities[key]) && number(c.abilities[key], 3, 20))) fail();
     if (c.level !== undefined && (!Number.isInteger(c.level) || !number(c.level, 1, 20))) fail();

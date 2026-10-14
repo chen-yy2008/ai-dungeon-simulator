@@ -199,6 +199,60 @@
       "license": "CC0-1.0",
       "modified": "保留 alpha，RGB 改为 99/64/41，九宫格裁片由 CSS 完成",
       "sha256": "c715cb456161364925fc1802b592cb61c9d8e95d365ec2757818c559f743b50f"
+    },
+    {
+      "file": "assets/knightgold-portrait.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/KnightGold/Faceset.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "96b9b3d8129b8d9b6b2be6a9ddaaa0a5501266abc63d0f245624e47a5722ddf1"
+    },
+    {
+      "file": "assets/knightgold.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/KnightGold/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "6c1c16f9641d018d385cd128ec266a643c8612c21a08544240aaa6bebd113510"
+    },
+    {
+      "file": "assets/inspector-portrait.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Inspector/Faceset.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "cb953faee4a2c22a55afe0273df5ee46c55e7f16ffe95d5799bc3b0952e3d175"
+    },
+    {
+      "file": "assets/inspector.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/Inspector/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "b9d23e8f4bc653533ddbaa3a9c68cd9ad0bb9755cba1fa6985aeba7a1d3337e7"
+    },
+    {
+      "file": "assets/sorcererorange-portrait.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/SorcererOrange/Faceset.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "7b77d6eec074dc8720e2847b19e99fc42638a7a6b60d4508dfcee497bf2cbc12"
+    },
+    {
+      "file": "assets/sorcererorange.png",
+      "source": "Ninja Adventure - Asset Pack/Actor/Character/SorcererOrange/SpriteSheet.png",
+      "author": "Pixel-Boy / AAA",
+      "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+      "license": "CC0-1.0",
+      "modified": false,
+      "sha256": "18aea3b2cf3fe7c2322bf8e19b5cf42516e7ca3907fdfdd2e6252c1b0b1bee57"
     }
   ]
 }
