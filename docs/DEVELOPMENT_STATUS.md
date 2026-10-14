@@ -1,10 +1,19 @@
-# 开发进度
+# 开发进度：本轮完成并停止
 
-- v0.4.0 已发布：e2480fde38fe10bd19fcd859cdf7757ffa640e27；590671 行动、Chrome/Edge、旧存档、390px 布局通过。
-- Pages 首次已验证：官方 gh-pages 后备，run 38516972151 success，HTTP v0.4/source SHA 与在线浏览器通过。
-- v0.5.0 已发布：dac747811331bba3b5e79f008a8220fde49c13c6；600000 + 36000 行动、五条链所有分支、Chrome/Edge 通过；Pages run 38517283728 success，HTTP v0.5/source SHA 与在线完整浏览器通过。
-- v0.6 已实现角色卡和编辑器；24000 行动、旧存档与规则对比、Chrome/Edge 实测通过，正在最终门禁；尚未填写发布/上线成功。
-- 用户第二次官方补充授权已成功，gh keyring scopes repo/workflow 有效；将自定义 Actions 纳入 v0.6，正式标签自动部署，不再使用后备分支。
-- PowerShell 5.1 发布测试 13 个本地用例通过；v0.6 发布 DryRun 全门禁通过，正在提交/标签/远程核验。
-- 旧 ZIP 浏览器资料保留在外层但不提交；忽略与历史扫描持续执行。
-- 本轮只到 v0.6；待正式发布、部署与总报告核验后停止。
+2026-10-14。批准队列 v0.4 → Pages → v0.5 → v0.6 已全部完成；没有启动 v0.7。PAUSE_AUTODEV 阶段检查均不存在。
+
+| 版本 | 正式提交 | 发布 / 部署核验 |
+| --- | --- | --- |
+| v0.4.0 | e2480fde38fe10bd19fcd859cdf7757ffa640e27 | 远程标签一致；Pages 托管 run 38516972151 success；HTTP/source SHA/在线 Chrome 通过 |
+| v0.5.0 | dac747811331bba3b5e79f008a8220fde49c13c6 | 远程标签一致；Pages 托管 run 38517283728 success；HTTP/source SHA/在线 Chrome 通过 |
+| v0.6.0 | 7da830ef21ac81ae4f2a10a62e395492677e16ca | 远程标签一致；自定义 Actions run 38518722121 build/deploy success；HTTP/source SHA、9 个资源与在线角色卡交互通过 |
+
+网站：https://chen-yy2008.github.io/ai-dungeon-simulator/ 。仓库：https://github.com/chen-yy2008/ai-dungeon-simulator 。目前 Pages build_type=workflow，网站运行 v0.6 标签，后续纯文档检查点不更新站点。
+
+测试：v0.4 世界 590671 行动；v0.5/v0.6 默认世界 600000 行动 / 120 配置；NPC 五链 36000 行动；角色卡 24000 行动及存档续演；核心 300 地图 + 300 战斗；Windows Chrome/Edge、390px、在线 Chrome、Ubuntu Actions Chrome；PowerShell 5.1 发布保护 13 本地用例全部通过。具体覆盖与限制见对应版本报告。
+
+首次 workflow 权限不足：App 403 未绕过，使用已授权官方分支式后备完成 v0.4/v0.5。第一次授权无人操作过期，用户要求重新申请后授权成功，CLI scopes repo/workflow 正常。首次自定义标签未观察到自动运行，已派发明确 v0.6.0 并成功；AGENTS 明确以后检查运行并在未触发时自主派发。
+
+世界/角色源码沿用核心，无新的框架、后端、LLM、付费服务或多角色。六维/设定等级不重算战斗；描述能力与文本愿望不执行规则；NPC 内容有限、日程非连续寻路。没有遗留关键测试失败或权限阻碍；后续开发需用户新指令。
+
+旧 ZIP 浏览器资料保留在外层，不提交；本轮准确白名单、忽略、可达历史安全检查通过，不承诺扫描可识别所有秘密。最终核验文档以安全快进检查点推送，不改写标签或历史。

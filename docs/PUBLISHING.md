@@ -87,3 +87,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/publish.ps1
 v0.4/v0.5 用分支式官方 Pages 构建完成上线。补充 workflow 授权后，.github/workflows/pages.yml 改为正式版本标签触发或明确 workflow_dispatch 输入已发布标签；日常 main 提交不触发网站更新。工作流重新检查标签源码的安全、核心、世界、浏览器与模型测试，打包运行文件，使用固定官方 Action 提交部署。
 
 可重复部署既有正式版本：gh workflow run pages.yml --repo chen-yy2008/ai-dungeon-simulator --ref main -f tag=v0.6.0。随后必须核验运行结论、HTTP version.json 中的版本和 sourceCommit、相对资源和在线浏览器。scripts/deploy-pages.ps1 保留无 workflow 时的后备，不能在自定义模式下替换部署源。
+
+首次工作流注册与标签同时推送时未观察到自动运行，本轮通过官方 workflow_dispatch 成功部署同一正式标签。以后 Codex 发布后必须查询运行；未触发时自主派发已有标签，并验证结果。绝不把提交/标签存在当作上线成功。

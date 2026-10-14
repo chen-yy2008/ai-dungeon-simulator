@@ -27,7 +27,7 @@
 5. 执行 `powershell -NoProfile -File scripts/publish.ps1 -Version vX.Y.Z -DryRun`。该命令运行必要测试与预检，不暂存、不提交、不创建 Tag、不推送。
 6. 预检通过后执行 `powershell -NoProfile -File scripts/publish.ps1 -Version vX.Y.Z -Summary "简短版本说明"`。脚本重新运行测试，按 release.json 的准确路径暂存，提交、创建注释标签，并原子推送当前发布分支和指定标签。
 7. 验证远程分支与标签对象 SHA，最终附上版本号、更新内容、实际测试结果、仓库及版本标签链接。
-8. 当前 workflow 授权已核验，自定义 .github/workflows/pages.yml 只在正式标签或明确标签重部署时运行。发布后核验 Actions 和 HTTP/version.json（版本与源 SHA）、在线浏览器交互。普通 main 修改不部署。CLI 可用 gh workflow run pages.yml --ref main -f tag=vX.Y.Z 重部署既有正式标签；旧 scripts/deploy-pages.ps1 是无 workflow 权限时的分支式后备，不与自定义工作流同时使用。
+8. 当前 workflow 授权已核验，自定义 .github/workflows/pages.yml 只在正式标签或明确标签重部署时运行。发布后先查询 pages.yml 的标签运行；首次注册或标签推送后未观察到运行时，自主执行 gh workflow run pages.yml --repo chen-yy2008/ai-dungeon-simulator --ref main -f tag=vX.Y.Z，不要求用户重复确认。核验 Actions 和 HTTP/version.json（版本与源 SHA）、在线浏览器交互。普通 main 修改不部署。CLI 可用 gh workflow run pages.yml --ref main -f tag=vX.Y.Z 重部署既有正式标签；旧 scripts/deploy-pages.ps1 是无 workflow 权限时的分支式后备，不与自定义工作流同时使用。
 
 ### 错误处理
 

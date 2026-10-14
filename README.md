@@ -2,11 +2,11 @@
 
 v0.5 新增米菈（旅馆）、赛伦（商旅）、奥林（公会）、薇娅（法师）的真实日程、在场条件、关系与记忆，以及失踪商队、遗迹测绘、道路威胁、药剂研究、欠下人情五条有限分支链。行动/调查/实际战斗结束后至少过一个游戏日，角色再与在场 NPC 回访才结算后果。原商人救助仍保留并遵循返镇与市集时间。NPC 关系与已接受委托进入评分；疲劳和生命安全仍优先。
 
-在线体验：[艾尔文边境](https://chen-yy2008.github.io/ai-dungeon-simulator/)。v0.4/v0.5 已通过正式标签分支式部署与在线实测；用户补充 workflow 授权后启用自定义官方 Actions，只在正式标签或明确重部署时发布，运行文件白名单不包含文档或浏览器资料。
+在线体验：[艾尔文边境 v0.6.0](https://chen-yy2008.github.io/ai-dungeon-simulator/)。已核对版本、正式标签源 SHA 与全部资源，在线完整浏览器检查通过。官方自定义 Actions 构建/部署成功；仅正式标签或明确重部署更新网站，main 日常提交不更新。运行包不含文档、角色卡示例、浏览器配置或密钥。
 
 v0.4 重制观察界面：原创羊皮纸人物卡、六维属性、折叠详情、故事/事实/骰子三类有限记录、逐格视觉过渡及窄屏排版。六维暂不重算原有战斗参数，等级 1 明确为原型占位，没有经验升级。v0.3 存档在读取时补齐新字段，保留时间、战斗与随机源。
 
-首次基准版本号为 **v0.3.0**，当前开发版本为 **v0.6.0**。后续正式版本的自动提交、标签与推送规范见 [AGENTS.md](AGENTS.md)、[发布指南](docs/PUBLISHING.md) 和 [CHANGELOG.md](CHANGELOG.md)。发布脚本为 `scripts/publish.ps1`，审核文件清单与版本保存在 `release.json`。
+首次基准版本号为 **v0.3.0**，当前正式版本为 **v0.6.0**。后续正式版本的自动提交、标签与推送规范见 [AGENTS.md](AGENTS.md)、[发布指南](docs/PUBLISHING.md) 和 [CHANGELOG.md](CHANGELOG.md)。发布脚本为 `scripts/publish.ps1`，审核文件清单与版本保存在 `release.json`。
 
 GitHub 公开仓库：[chen-yy2008/ai-dungeon-simulator](https://github.com/chen-yy2008/ai-dungeon-simulator)。
 
@@ -50,7 +50,7 @@ JSON 使用 schema=ai-dungeon-character、version=1；完整示例见 [角色卡
 - node tests/character.cjs：模型校验、导出回导、安全拒绝、旧存档、同条件行为对比、24000 个新配置行动与续演。
 - node tests/pages.cjs：相对资源与运行包白名单。发布门禁还运行原地图/战斗、120 配置世界长期模拟与实际浏览器交互。
 
-本轮 Windows Chrome、Edge 和 390px 布局实际验证；在线 v0.4/v0.5 的完整浏览器验证通过。每版最终部署结果与 Actions 链接见 [开发进度](docs/DEVELOPMENT_STATUS.md) 和 [版本报告](docs/releases/)。保存键延续 v0.3，旧冒险可恢复；不同游戏版本的行为可能改变，不承诺跨版本完全一致。
+本轮 Windows Chrome、Edge 和 390px 布局实际验证；在线 v0.4/v0.5/v0.6 的完整浏览器验证通过；v0.6 还通过 Ubuntu GitHub Actions 的真实 Chrome 验收。每版最终部署结果与 Actions 链接见 [开发进度](docs/DEVELOPMENT_STATUS.md) 和 [版本报告](docs/releases/)。保存键延续 v0.3，旧冒险可恢复；不同游戏版本的行为可能改变，不承诺跨版本完全一致。
 
 ## v0.3 完成的功能
 
@@ -213,7 +213,7 @@ node tests/browser.cjs
 - 覆盖全部 14 种事件；额外检查每个行动及判定分支、商人的帮助与无视后续、低资源兜底、死亡停止、非法存档拒绝、固定种子和存取后继续的一致性。
 - Chrome 与 Edge 实测通过：角色创建、可观察移动、世界/地牢切换、骷髅战斗、暂停/调速、1500 次连续逻辑行动、返回世界、商人后续、详情/历史、保存/读取/刷新恢复、重置、死亡停止、三职业和真实计时器暂停。
 
-未专项验证其他浏览器、其他操作系统、手机、后台标签页时序或跨浏览器存档。后台标签页可能降低实际播放频率，但不会改变一次逻辑行动的游戏时间成本。
+未专项验证 Safari、macOS、手机、后台标签页时序或跨浏览器存档；Windows Chrome/Edge 与 Ubuntu Actions 的 Chrome 自动检查已执行。后台标签页可能降低实际播放频率，但不会改变一次逻辑行动的游戏时间成本。
 
 ## 当前局限与后续方向
 
